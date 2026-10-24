@@ -124,7 +124,7 @@ Everything decided so far, grouped by topic. Each entry is the current rule; sup
 
 ## Backlog (agreed, not built)
 
-- Next update: see `docs/FEATURE_SPEC_next.md` (new level flow, Build menu, deployer, bigger fleet, name generator).
+- Next update: see `docs/FEATURE_SPEC_next.md` (new level flow, Build menu, deployer, bigger fleet, name generator). Its eight open questions were answered on 2026-10-23 (owner approved all proposals): one-syllable CVC names; buildings cost ore only; printer rebuilt at a fixed wreck frame, deployer placed freely; deployer becomes where new drones appear and lists the crew; map grows to about 64 x 44; 2 power cells per crystal; starting drones count toward power with 1 crystal pre-stored; 25 to 35 minute target. Each topic entry above is updated as its step ships.
 - Drones resizing so several can work one wall face without overlapping (owner).
 - Tutorial message rewrite (owner: current wording is weak).
 - Story-heavy promotion moment.

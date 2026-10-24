@@ -1,6 +1,6 @@
 # Next update: the base-building level flow
 
-Status: **specified by the owner, not built.** The open questions at the bottom must be answered by the owner before implementation (see the working agreement in CLAUDE.md). The bug-fix deployment that preceded this spec is done and live.
+Status: **specified by the owner; open questions answered (owner approved all proposals, 2026-10-23). Being built in the steps listed below.** The bug-fix deployment that preceded this spec is done and live.
 
 ## Why
 
@@ -40,16 +40,28 @@ The owner wants the first level to feel like the start of a base-building and au
 
 Set mining tasks, deploy more workers, gradually specialise some with packs to speed up mining and gathering, find the Captain's core, and unlock an already-specialised unit who breaks through hard rock. The player should feel satisfaction watching the drone army grow and tackle what they mark, and the base slowly grow. When the Captain arrives, work gets done visibly more efficiently.
 
-## Open questions for the owner (answer before building)
+## Decisions (owner approved, 2026-10-23)
 
-1. **Names.** Three-letter names like "Tav" or "Bok" (one consonant-vowel-consonant syllable), or longer names built from three such syllables, like "Baktunim"?
-2. **Building costs.** Given "crystals create, ore improves": should the printer and deployer cost crystals, ore, or both? The flow above has drones hauling ore from the command center to the frame. If crystals are involved, do they come out of the power plant (lowering power capacity) or from a separate stock?
-3. **The printer.** Is it placed with the same Build menu as the deployer, or rebuilt at a fixed wreck site the player supplies with ore, leaving the deployer as the first building placed freely?
-4. **The deployer in level 1.** Does it need to do anything here beyond being built (for example, become where new drones appear, or list the crew)?
-5. **Map.** With up to 19 power cells needed, should the map grow, or keep its size with richer veins?
-6. **Power for 20.** Should crystals keep adding 1 power cell each, or should each crystal add more so 20 drones doesn't need 19 crystal veins?
-7. **Pre-deployed drones.** Do the two drones in the clearing count toward power (so the player starts needing 3 power cells), and does the command center supply enough for them?
-8. **Tutorial pacing targets.** Is 20–30 minutes still the target with the longer flow?
+1. **Names**: one syllable, consonant-vowel-consonant (e.g. “Tav”, “Bok”, “Rix”), random, never repeating a current crew name. They fit map labels and the roster with 20 on screen. Named story crew can get longer hand-written names later.
+2. **Building costs**: ore only, hauled from the command center. Crystals stay in the power plant, so “crystals create” works through power (how many drones you can run). Starting costs: printer 8 ore, deployer 12 ore, tuned so the debris-clearing opening lasts about 3 to 5 minutes.
+3. **The printer** is rebuilt at a fixed wreck site the player supplies with ore, using the same frame-and-haul code as placed buildings. The deployer is the first building placed freely with the Build menu.
+4. **The deployer in level 1**: once built, newly printed drones appear at it, and its panel lists the whole crew.
+5. **Map** grows moderately, from 48 x 34 to about 64 x 44, with more crystal and ore veins, so 20 drones aren’t crowding the same faces and the slow middle has enough walls.
+6. **Power**: each stored crystal adds **2** power cells (command center still 1). About 9 crystals power 19 drones; the map needs roughly 6 to 8 crystal veins.
+7. **Pre-deployed drones** count toward power. The power plant starts with 1 crystal stored: 1 + 2 = 3 cells for the 3 starting drones, and the first mined crystal opens room to print.
+8. **Pacing**: target 25 to 35 minutes of real play; a perfect scripted run about 15 to 17 minutes.
+
+Technical choices that affect play (owner accepted with the above):
+- Rubble, wreckage, buildings and walls block a building footprint. Drones and items standing in it don’t; drones step out once the frame is placed.
+- Hauling ore to a construction frame is auto-work, with the same priority as hauling loose items, in All-round and Collect modes.
+
+## Build steps (one playable change each; owner playtests between)
+
+1. Name generator and the 20-crew fleet cap.
+2. New start: command center and power plant (1 crystal stored, 2 cells per crystal), 3 drones, printer rebuilt at a wreck frame from floor-debris ore; tutorial steps for the new opening.
+3. Build menu, placement ghost, construction frame and hauling; the deployer.
+4. Deployer behaviour (drones appear there, crew list) and its tutorial step.
+5. Bigger map with more veins, then pacing and balance pass.
 
 ## Acceptance checks to add to tests/playthrough.py
 
