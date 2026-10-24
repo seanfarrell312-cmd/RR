@@ -1,0 +1,1479 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Crash Site: level 1 prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --void:#07080c;
+  --panel:rgba(240,243,248,.94);
+  --panel-solid:#f0f3f8;
+  --edge:#a3adbd;
+  --ink:#18202c;
+  --ink-dim:#4f5d71;
+  --amber:#c97a12;
+  --amber-glow:#ffb547;
+  --teal:#1f8a7e;
+  --cell-off:#d6dce6;
+  --btn:#18202c;
+  --btn-ink:#f0f3f8;
+  --shadow:0 6px 24px rgba(0,0,0,.35);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --panel:rgba(16,20,29,.9);
+    --panel-solid:#10141d;
+    --edge:#36405a;
+    --ink:#e7ebf2;
+    --ink-dim:#97a3b6;
+    --amber:#ffb547;
+    --teal:#5fe0d0;
+    --cell-off:#232a3a;
+    --btn:#ffb547;
+    --btn-ink:#10141d;
+  }
+}
+:root[data-theme="dark"]{
+  --panel:rgba(16,20,29,.9);
+  --panel-solid:#10141d;
+  --edge:#36405a;
+  --ink:#e7ebf2;
+  --ink-dim:#97a3b6;
+  --amber:#ffb547;
+  --teal:#5fe0d0;
+  --cell-off:#232a3a;
+  --btn:#ffb547;
+  --btn-ink:#10141d;
+}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%;margin:0;overflow:hidden}
+body{background:var(--void);color:var(--ink);font-family:"Chakra Petch",system-ui,-apple-system,"Segoe UI",sans-serif;font-size:15px;line-height:1.45;user-select:none;-webkit-user-select:none}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block;cursor:crosshair}
+.panel{position:fixed;background:var(--panel);border:1px solid var(--edge);border-radius:6px;box-shadow:var(--shadow);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+button{font:inherit;cursor:pointer;border:0;border-radius:4px;padding:.45em .9em;background:var(--btn);color:var(--btn-ink);font-weight:600}
+button:focus-visible,input:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+button.ghost{background:transparent;color:var(--ink);border:1px solid var(--edge)}
+button:disabled{opacity:.4;cursor:not-allowed}
+
+/* power meter: the signature element */
+#power{top:calc(12px + env(safe-area-inset-top,0px));left:12px;padding:10px 12px 11px;min-width:220px}
+#power .row{display:flex;justify-content:space-between;align-items:baseline;gap:16px;margin-bottom:7px}
+#power .label{font-weight:600;font-size:14px}
+#pnum{font-size:22px;font-weight:700;letter-spacing:.02em;font-variant-numeric:tabular-nums}
+#pnum small{font-size:13px;color:var(--ink-dim);font-weight:500}
+#cells{display:flex;gap:4px;flex-wrap:wrap;max-width:320px}
+.cell{width:22px;height:30px;border-radius:3px;border:2px solid var(--edge);background:var(--cell-off);position:relative;transition:background .3s,border-color .3s}
+.cell.on{background:var(--amber-glow);border-color:var(--amber);box-shadow:0 0 10px rgba(255,181,71,.55)}
+.cell.on::after{content:"";position:absolute;left:50%;top:50%;width:8px;height:8px;margin:-4px;border-radius:50%;background:rgba(16,20,29,.55)}
+.cell.pending{background:repeating-linear-gradient(135deg,var(--amber-glow) 0 4px,transparent 4px 8px);border-color:var(--amber)}
+.cell.flash{animation:flash 1.6s ease-out}
+@keyframes flash{0%{transform:scale(1.35);box-shadow:0 0 22px var(--teal);border-color:var(--teal)}100%{transform:scale(1)}}
+#capt{display:none;align-items:center;gap:8px;margin-top:9px;font-size:13px;color:var(--ink-dim)}
+#capt.show{display:flex}
+.captchip{display:inline-flex;align-items:center;gap:7px;padding:3px 10px 3px 4px;border-radius:14px;background:#2c3e66;color:#f7e3b0;border:2px solid #f2c14e;font-weight:600;font-size:13px}
+.captchip i{width:16px;height:16px;border-radius:50%;background:#3b5285;border:2px solid #f2c14e;display:inline-block;position:relative}
+.captchip i::after{content:"";position:absolute;width:5px;height:5px;border-radius:50%;background:#ffb547;right:1px;top:4px}
+.captchip.sel{box-shadow:0 0 0 2px var(--teal)}
+button.cell{padding:0;cursor:pointer}
+.cell.sel{outline:2px solid var(--teal);outline-offset:2px}
+#tip{position:fixed;z-index:20;pointer-events:none;background:var(--panel-solid);color:var(--ink);border:1px solid var(--edge);border-radius:4px;padding:6px 10px;font-size:13px;box-shadow:var(--shadow);display:none;flex-direction:column;line-height:1.3}
+#tip.show{display:flex}
+#tip span{color:var(--ink-dim)}
+#crewStat{display:flex;gap:6px;margin-top:9px;font-size:13px;color:var(--ink-dim);min-height:24px;align-items:center}
+.stat-btn{padding:2px 9px;font-size:13px;background:transparent;color:var(--ink);border:1px solid var(--edge);font-weight:600}
+.stat-btn.warn{border-color:#d9a400;color:var(--ink);background:rgba(245,197,24,.22)}
+#objProg{margin-top:8px;font-weight:700;font-size:15px;color:var(--amber);font-variant-numeric:tabular-nums}
+.focus{display:flex;margin:2px 0 4px;border:1px solid var(--edge);border-radius:5px;overflow:hidden}
+.focus button{flex:1;border-radius:0;background:transparent;color:var(--ink);padding:.35em .4em;font-size:14px}
+.focus button+button{border-left:1px solid var(--edge)}
+.focus button.on{background:var(--btn);color:var(--btn-ink)}
+#sel p.focus-info{font-size:13px;margin:0 0 10px}
+.pk{display:inline-block;width:10px;height:10px;border:1px solid rgba(255,255,255,.7);box-shadow:0 0 0 1px rgba(0,0,0,.35);margin:0 0 0 6px;vertical-align:0}
+button .pk,td .pk{margin:0 6px 0 0}
+.slots{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px;align-items:center}
+.slot{font-size:13px;padding:3px 8px;border:1px dashed var(--edge);border-radius:4px;color:var(--ink-dim)}
+button.slot.full{border-style:solid;background:transparent;color:var(--ink);font-weight:600}
+.picker,.actions.craft{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 6px}
+.actions.craft{margin-top:8px}
+.picker button,.craft button{padding:.3em .6em;font-size:13px}
+.queue{display:flex;flex-wrap:wrap;gap:4px;align-items:center;font-size:13px;color:var(--ink-dim)}
+.qchip{padding:1px 7px;font-size:12px;background:transparent;color:var(--ink);border:1px solid var(--edge)}
+#sel{max-height:calc(100vh - 140px);overflow:auto}
+#sel td:first-child{white-space:nowrap;padding-right:10px}
+.psec{border-top:1px solid var(--edge);margin-top:10px;padding-top:10px}
+.psec h4{margin:0 0 4px;font-size:15px}
+#sel .psec p{font-size:13px;margin:0 0 6px}
+#sel .psec table{margin-bottom:8px}
+.packlist{display:flex;flex-direction:column;gap:6px}
+.packlist button{display:grid;grid-template-columns:auto 1fr;gap:0 6px;text-align:left;padding:.4em .6em;font-weight:400}
+.packlist button .pk{grid-row:span 2;margin:3px 0 0}
+.packlist button b{font-size:14px}
+.packlist button span{font-size:12.5px;color:var(--ink-dim)}
+.queue{margin:2px 0 4px}
+.focus button{white-space:nowrap;font-size:12.5px;padding:.4em .2em}
+
+#res{top:calc(12px + env(safe-area-inset-top,0px));right:12px;padding:8px 10px 8px 14px;display:flex;align-items:center;gap:18px}
+#res .r{display:flex;flex-direction:column;line-height:1.15}
+#res .r span{font-size:12px;color:var(--ink-dim)}
+#res .r b{font-size:19px;font-variant-numeric:tabular-nums}
+#res .btns{display:flex;gap:6px}
+#res button{padding:.3em .7em}
+
+#obj{left:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));width:min(430px,calc(100vw - 24px));padding:12px 14px 13px;border-left:4px solid var(--amber)}
+#objStep{font-size:13px;color:var(--ink-dim);font-weight:600}
+#objMsg{margin:4px 0 0;font-size:15.5px;max-width:60ch}
+#obj.pulse{animation:objp .9s ease-out}
+@keyframes objp{0%{transform:translateY(6px);border-left-color:var(--teal)}100%{transform:none}}
+
+#sel{right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));width:min(300px,calc(100vw - 24px));padding:12px 14px 14px}
+#sel h3{margin:0;font-size:19px;line-height:1.2}
+#sel .role{font-size:13px;color:var(--ink-dim);margin-bottom:8px}
+#sel p{margin:0 0 10px;font-size:14px;color:var(--ink-dim)}
+#sel table{width:100%;border-collapse:collapse;font-size:14px;margin-bottom:10px}
+#sel td{padding:2px 0}
+#sel td+td{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+#sel .actions{display:flex;gap:6px;flex-wrap:wrap}
+#sel ul{margin:0 0 4px;padding:0;list-style:none;font-size:14px;columns:2}
+
+#toast{position:fixed;left:50%;top:calc(16px + env(safe-area-inset-top,0px));transform:translateX(-50%);background:var(--panel-solid);color:var(--ink);border:1px solid var(--edge);border-radius:4px;padding:6px 12px;font-size:14px;opacity:0;transition:opacity .25s;pointer-events:none;box-shadow:var(--shadow)}
+#toast.show{opacity:1}
+
+.overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(4,6,10,.62);padding:16px;z-index:10}
+.overlay.show{display:flex}
+.card{background:var(--panel-solid);border:1px solid var(--edge);border-radius:8px;box-shadow:var(--shadow);padding:24px 26px;max-width:520px;width:100%;max-height:100%;overflow:auto}
+.card h1{font-size:40px;line-height:1.05;margin:0 0 6px;letter-spacing:.01em}
+.card h2{font-size:26px;line-height:1.15;margin:0 0 8px}
+.card p{margin:0 0 12px;color:var(--ink-dim);max-width:62ch}
+.card .go{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.card input{font:inherit;font-size:18px;width:100%;padding:8px 10px;border-radius:4px;border:1px solid var(--edge);background:transparent;color:var(--ink);margin:4px 0 4px}
+.kbd{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:14px;margin:6px 0 0}
+.kbd b{font-weight:600}
+.stat{display:grid;grid-template-columns:1fr auto auto auto;gap:6px 12px;align-items:center;font-size:16px;margin:14px 0 6px}
+.stat .old{color:var(--ink-dim);text-decoration:line-through}
+.stat .arrow{color:var(--ink-dim)}
+.stat .new{color:var(--amber);font-weight:700;font-size:18px}
+.promo-badge{width:64px;height:64px;border-radius:50%;background:#2c3e66;border:4px solid #f2c14e;box-shadow:0 0 28px rgba(242,193,78,.6);margin-bottom:12px;position:relative}
+.promo-badge::after{content:"";position:absolute;width:14px;height:14px;border-radius:50%;background:#ffb547;left:34px;top:20px;box-shadow:0 0 10px #ffb547}
+.crew{list-style:none;padding:0;margin:8px 0 0;display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;font-size:15px}
+.crew li span{color:var(--ink-dim);font-size:13px;margin-left:6px}
+#pauseTag{position:fixed;left:50%;top:45%;transform:translate(-50%,-50%);font-size:34px;font-weight:700;color:#e7ebf2;display:none;pointer-events:none;text-shadow:0 2px 12px #000}
+@media (max-width:700px){#sel{bottom:auto;top:calc(120px + env(safe-area-inset-top,0px))}}
+@media (prefers-reduced-motion:reduce){.cell.flash,#obj.pulse{animation:none}}
+</style>
+</head>
+<body>
+<canvas id="c" aria-label="Game view"></canvas>
+
+<div id="power" class="panel" aria-live="polite">
+  <div class="row"><span class="label">Power</span><span id="pnum">1 <small>/ 1</small></span></div>
+  <div id="cells"></div>
+  <div id="capt"><button id="captBtn" class="captchip"><i></i><span id="captName">Captain</span></button><span>draws no power</span></div>
+  <div id="crewStat"></div>
+</div>
+
+<div id="res" class="panel">
+  <div class="r"><span>Ore</span><b id="oreN">0</b></div>
+  <div class="r"><span>Crystals stored</span><b id="cryN">0</b></div>
+  <div class="r"><span>Time</span><b id="timeN">0:00</b></div>
+  <div class="btns"><button class="ghost" id="pauseBtn" title="Pause (P)">Pause</button><button class="ghost" id="helpBtn" title="Controls (H)">Controls</button></div>
+</div>
+
+<div id="obj" class="panel"><div id="objStep"></div><p id="objMsg"></p><div id="objProg" hidden></div></div>
+<div id="sel" class="panel" hidden></div>
+<div id="toast" role="status"></div>
+<div id="tip" role="tooltip"></div>
+<div id="pauseTag">Paused</div>
+
+<div class="overlay show" id="titleOv">
+  <div class="card">
+    <p style="margin:0 0 4px;font-weight:600;color:var(--amber)">Level 1 prototype</p>
+    <h1>Crash Site</h1>
+    <p>The ship went down and buried itself under a mountain. Every crew member went dark. You are the ship’s control program, and one drone has just answered your call.</p>
+    <p>Wake the crew, power the wreck, and get the main terminal running.</p>
+    <div class="go">
+      <button id="startTut">Start with tutorial</button>
+      <button class="ghost" id="startFree">Free play (skip tutorial)</button>
+    </div>
+    <p style="margin:14px 0 0;font-size:13px">Needs a mouse and keyboard. “Crash Site” is a working title.</p>
+  </div>
+</div>
+
+<div class="overlay" id="helpOv">
+  <div class="card">
+    <h2>Controls</h2>
+    <div class="kbd">
+      <b>Left-click</b><span>Select a drone or building</span>
+      <b>Left-drag</b><span>Select several drones in a box</span>
+      <b>Shift + click</b><span>Add or remove a drone from the selection</span>
+      <b>Q</b><span>Select your whole crew</span>
+      <b>Right-click floor</b><span>Move there. This switches the drone to manual until you give it a job or turn Auto-work back on.</span>
+      <b>Right-click rock, rubble or wreckage</b><span>Queue it as a job. With drones selected, they start on it now and return to auto-work. Unselected drones take jobs in queue order and never drop a job they’re doing.</span>
+      <b>Rubble</b><span>Every mined wall leaves rubble. Drops stay buried until it’s cleared. Drones can walk over it, slowly.</span>
+      <b>Work mode</b><span>All-round, Mine, Clear or Collect, set in a drone’s panel. Drones only take jobs their mode covers.</span>
+      <b>Upgrade packs</b><span>Print them at the drone printer for ore. Select a drone, press Upgrade and pick a pack. Red mines faster, blue clears faster, green moves faster, each with a trade-off.</span>
+      <b>Yellow warning</b><span>The drone is blocked: jobs are waiting but it can’t do any of them</span>
+      <b>Right-click a job, nothing selected</b><span>Remove the job</span>
+      <b>Right-click crystal, ore or core</b><span>Pick it up now (drones also collect these on their own)</span>
+      <b>Hard rock</b><span>Only the Captain can cut it</span>
+      <b>Power box</b><span>Click a crew icon to select, double-click to find it, hover for name and task</span>
+      <b>Right-click building</b><span>Deliver what you’re carrying there, or repair it</span>
+      <b>WASD, arrows, screen edge</b><span>Pan the camera (middle-drag works too)</span>
+      <b>Mouse wheel</b><span>Zoom</span>
+      <b>Esc</b><span>Clear the selection</span>
+      <b>P</b><span>Pause</span>
+    </div>
+    <div class="go"><button id="helpClose">Back to the cave</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="nameOv">
+  <div class="card" style="max-width:400px">
+    <h2 id="nameTitle">New drone printed</h2>
+    <p id="nameSub">Give it a name. It stays with your crew from level to level.</p>
+    <input id="nameIn" maxlength="16" autocomplete="off" aria-label="Drone name">
+    <div class="go"><button id="nameOk">Bring it online</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="promoOv">
+  <div class="card" style="max-width:440px">
+    <div class="promo-badge"></div>
+    <h2 id="promoTitle"></h2>
+    <p>The Captain’s core is installed. Command protocols, ship schematics and forty years of service, all restored.</p>
+    <div class="stat">
+      <span>Power use</span><span class="old">1</span><span class="arrow">to</span><span class="new">0</span>
+      <span>Mining speed</span><span class="old">100%</span><span class="arrow">to</span><span class="new">125%</span>
+      <span>Move speed</span><span class="old">100%</span><span class="arrow">to</span><span class="new">125%</span>
+    </div>
+    <p style="margin-top:10px">One power cell just freed up, so you can print another drone. Named crew can be upgraded far past a regular drone’s limits later on.</p>
+    <div class="go"><button id="promoOk">Back to work</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="winOv">
+  <div class="card">
+    <p style="margin:0 0 4px;font-weight:600;color:var(--amber)">Level complete</p>
+    <h2>Main terminal online</h2>
+    <p>This section of the ship is linked and ready to warp to the rest of the wreck. Your crew comes with you.</p>
+    <p id="winTime" style="margin:0"></p>
+    <div class="go"><button id="again">Play again</button></div>
+  </div>
+</div>
+<script>
+(() => {
+"use strict";
+const MAP_SRC = [
+  "################################################",
+  "#RRddRdddRRRdddRRRRRRddddddRRRRRRddddddRRRRRddR#",
+  "#RRddddRdRRRdddRRRRRRddddddRRRRRRdddRddRRRRdRdd#",
+  "#RRRRRddddddRRRRRRdddRRRdd##RddRdvRRddddddRRRdd#",
+  "#RRRRRddddddRRRRRRdddRRRdddRRRdvRRRRRdddddRRRdd#",
+  "#RRRRddddddddRRRdRddcdRRdddRRRddddRRddddddRRRdd#",
+  "#ddRddddddddRRRdRRdRdRddRRRRRRdRddddRRRRdRRRRRR#",
+  "#ddddRRdddddRRRddRddddddRddRRRdddddRRvRRRRRRRRR#",
+  "#RdddddddddddRRdddddddddRRRRRRddddddRRRRdRRdRRR#",
+  "#ddddRddRdRRdddRddddvdRddddRd##dddddRdRRRRdddRd#",
+  "#ddRdRdddddRdddddddRdRRRRddddd#dddddRRRRR##dddd#",
+  "#dddRRdddRRRdddddRdddRRRddddddddddddRRRRdRRdddd#",
+  "#RddRRRRRvddRRRddd.....dddRRRRddddvddRdRRRdRdRR#",
+  "#vdRRR##RdddRdRx...o..r..ddRRRddRdddddddRRddddR#",
+  "#ddRRdRRdRddRRR.r.......X.dRdRddddRddddRRRdddRR#",
+  "#dddddRddRdddv.............dcRdRRdddRRRRRRdRddd#",
+  "#RdvddddRddRRdx........r...RdRdRRdddddRRdRddddd#",
+  "#d.S...r..o................dRRRdRRRRRRRRRRRRRRR#",
+  "#RddRRRRRRRRRR.r.....r...x.dRddddRRRRRRRRRRRRRR#",
+  "#RRRRRRRRRRRRR..........r..ddddddRRRRRRRRRRRRRR#",
+  "#RRRRRRRRRRRRRR.x......X..RdddRddRRRRRv...cRRRR#",
+  "#RRRddddd##dRddR..o......RddddRRRRRRR.......RRR#",
+  "#RRRdddddddddddRdd.....ddddddddRdRRRv........vR#",
+  "#RRRRdddddvdddRdvRRR.dRdddddddRRRRRR.........RR#",
+  "#ddRdvddRRRRRRRRvRRRodRRRRRddddddRRRc........cR#",
+  "#dddRvdddRRRRRddddRRXdRdRRddddRddRRRR.......RRR#",
+  "#dddRddddRdRdRRdddRRdvddRRRRRddddRRRR.....vRRRR#",
+  "#RRRRRddddRRRRRdddRRdRRvvRRddddRRRRR..RvRRRRRRR#",
+  "#RRRRRdddRRR##RRddRR.ddrddddvodd..WRRRRRRRRRRRR#",
+  "#dRRRRdRdRRRRRdRdddRdRRRddddddRvRRRRRRRRRRRRRRR#",
+  "#vRdd##ddRRRRdvRddRRRddRvddRRRRRRRRRRRRRRRRRRRR#",
+  "#RddddddRRRRRRRdddRRRddddvdRRRRRRRdddddRRRddRRR#",
+  "#RRddRdddRRRRRRdddRRRddddddRRRRdRddddvdRdRdddRR#",
+  "################################################"
+];
+
+// ---------- constants ----------
+const TS = 32;
+const H = MAP_SRC.length, W = MAP_SRC[0].length;
+const FLOOR = 0, DIRT = 1, ROCK = 2, BED = 3, SEAM = 4, ANOM = 5, OREV = 6;
+const HARD = { [DIRT]: 12, [OREV]: 15, [SEAM]: 15, [ANOM]: 18, [ROCK]: 24 };   // seconds of work at 100% mining speed
+const WRECK_HP = 8;                // wreckage clears like soft rock rubble
+const BASE_SPEED = 2.3;            // tiles per second
+const CAPT_BONUS = 1.25;           // Captain: +25% move and mining
+const CLEAR_MULT = 2;              // rubble clears at 2x mining speed
+const PRINT_TIME = 3;
+const REPAIR_NEED = 10;
+const NEED_ORE = 12, NEED_CRY = 2;
+const NAMES = ["Pip", "Rivet", "Sprocket", "Nib", "Ferro", "Widget", "Dot", "Cog", "Tink", "Gizmo", "Lug", "Flux"];
+const RUBBLE = 1, WRECK = 2;
+const PACK_COST = 3, PACK_TIME = 5, QUEUE_MAX = 5;
+const PACKS = ["red", "blue", "green"];
+const PACK_COLOR = { red: "#e0483e", blue: "#3d7be0", green: "#3fae5a" };
+const PACK_NAME = { red: "Mining pack", blue: "Clearing pack", green: "Gathering pack" };
+const PACK_FOCUS = { red: "mine", blue: "clear", green: "collect" };
+const PACK_INFO = { red: "Mining speed ×2. Can’t haul items.", blue: "Clearing speed ×2. Can’t mine.", green: "Move speed +50%. Can’t clear rubble." };
+
+// ---------- state ----------
+let tType, tHp, pile, pHp, pMax, revealed, bldAt;
+let units, items, buildings, particles, jobs, buried;
+let jobSeq = 0;
+let cam = { x: 0, y: 0, z: 1.3 };
+let mode = "title";
+let paused = false, freePlay = false, elapsed = 0, step = 0, nextId = 1, nameIdx = 0;
+let selBuilding = null, hover = { x: 0, y: 0, inside: false };
+let winTimer = -1, revealTimer = 0;
+let pendingName = null;
+
+const idx = (x, y) => y * W + x;
+const inb = (x, y) => x >= 0 && y >= 0 && x < W && y < H;
+const walkable = (x, y) => inb(x, y) && tType[idx(x, y)] === FLOOR && pile[idx(x, y)] !== WRECK && bldAt[idx(x, y)] < 0;
+const isMineable = t => t === DIRT || t === ROCK || t === SEAM || t === ANOM || t === OREV;
+const tileOf = u => [Math.floor(u.x / TS), Math.floor(u.y / TS)];
+const center = i => [((i % W) + 0.5) * TS, (Math.floor(i / W) + 0.5) * TS];
+const rnd = (i, k) => { let h = (i * 374761393 + k * 668265263) | 0; h = (h ^ (h >>> 13)) * 1274126177 | 0; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+const B = kind => buildings.find(b => b.kind === kind);
+const drones = () => units.filter(u => !u.captain);
+const captain = () => units.find(u => u.captain);
+const capacity = () => 1 + B("plant").crystals;
+const used = () => drones().length + (B("printer").cur === "drone" ? 1 : 0);
+const has = (u, c) => u.packs.filter(p => p === c).length;
+const canMine = (u, t) => !has(u, "blue") && (t === ROCK ? u.captain : isMineable(t));
+const canClear = u => !has(u, "green");
+const canHaul = u => !has(u, "red");
+const packSquares = u => u.packs.map(c => `<i class="pk" style="background:${PACK_COLOR[c]}" title="${PACK_NAME[c]}"></i>`).join("");
+const dispName = u => u.captain && u.name !== "Captain" ? `${u.name} (Captain)` : u.name;
+const jobKind = j => isMineable(tType[j]) ? "mine" : pile[j] ? "clear" : null;
+
+// ---------- setup ----------
+function init(free) {
+  freePlay = free;
+  const N = W * H;
+  tType = new Uint8Array(N); tHp = new Float32Array(N); pile = new Uint8Array(N);
+  pHp = new Float32Array(N); pMax = new Float32Array(N); revealed = new Uint8Array(N); bldAt = new Int16Array(N).fill(-1);
+  jobs = new Map(); buried = new Map(); jobSeq = 0;
+  let start = [3, 17];
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = idx(x, y), ch = MAP_SRC[y][x];
+    tType[i] = { "#": BED, "R": ROCK, "d": DIRT, "c": SEAM, "W": ANOM, "v": OREV }[ch] ?? FLOOR;
+    if (ch === "x" || ch === "X") { pile[i] = WRECK; pHp[i] = pMax[i] = WRECK_HP; if (ch === "X") buried.set(i, ["ore"]); }
+    if (ch === "r" || ch === "o") { pile[i] = RUBBLE; pHp[i] = pMax[i] = HARD[DIRT]; if (ch === "o") buried.set(i, ["ore"]); }
+    if (ch === "S") start = [x, y];
+    tHp[i] = HARD[tType[i]] || 0;
+  }
+  buildings = [];
+  mkBuilding("cc", 17, 15, { ore: 0, core: false, packs: { red: 0, blue: 0, green: 0 } });
+  mkBuilding("printer", 21, 15, { timer: 0, total: 0, cur: null, queue: [] });
+  mkBuilding("plant", 19, 19, { crystals: 0 });
+  mkBuilding("terminal", 40, 23, { ore: 0, crystal: 0, repair: 0, active: false });
+  units = []; items = []; particles = [];
+  nextId = 1; nameIdx = 0; step = 0; elapsed = 0; winTimer = -1; selBuilding = null; paused = false;
+  addUnit("Bolt", start[0], start[1]);
+  for (let x = 0; x <= 13; x++) for (let y = start[1] - 1; y <= start[1] + 1; y++) if (inb(x, y)) revealed[idx(x, y)] = 1;
+  revealAll();
+  cam.x = (start[0] + 5) * TS; cam.y = start[1] * TS; cam.z = 1.4;
+  mode = "play";
+  lastCells = ""; renderPower(); updateObjective(true); renderSel(true);
+}
+function mkBuilding(kind, x, y, extra) {
+  const b = Object.assign({ id: buildings.length, kind, x, y, w: 2, h: 2 }, extra);
+  for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) bldAt[idx(x + dx, y + dy)] = b.id;
+  buildings.push(b);
+}
+function addUnit(name, tx, ty) {
+  const u = { id: nextId++, name, x: (tx + .5) * TS, y: (ty + .5) * TS, captain: false, sel: false, task: null, path: [], carry: null, dir: 0, promoT: 0, bob: Math.random() * 6,
+    auto: true, focus: "all", holdT: 0, thinkT: Math.random() * .4, blocked: false, packs: [], slots: 1 };
+  units.push(u);
+  return u;
+}
+const baseOf = u => u.captain ? CAPT_BONUS : 1;
+const speedOf = u => BASE_SPEED * baseOf(u) * (1 + .5 * has(u, "green")) * TS * (pile[idx(...tileOf(u))] === RUBBLE ? .5 : 1);
+const workOf = u => baseOf(u) * (1 + has(u, "red"));
+const clearOf = u => baseOf(u) * CLEAR_MULT * (1 + has(u, "blue"));
+
+// ---------- pathfinding (Dijkstra, 8-way, no corner cutting, rubble costs double) ----------
+function dijkstra(sx, sy, isGoal) {
+  const N = W * H, dist = new Float64Array(N).fill(Infinity), prev = new Int32Array(N).fill(-1);
+  const s = idx(sx, sy); dist[s] = 0;
+  const heap = [[0, s]];
+  const push = e => { heap.push(e); let c = heap.length - 1; while (c > 0) { const p = (c - 1) >> 1; if (heap[p][0] <= heap[c][0]) break; [heap[p], heap[c]] = [heap[c], heap[p]]; c = p; } };
+  const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let c = 0; for (;;) { const l = c * 2 + 1, r = l + 1; let m = c; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === c) break; [heap[m], heap[c]] = [heap[c], heap[m]]; c = m; } } return top; };
+  while (heap.length) {
+    const [d, i] = pop();
+    if (d > dist[i]) continue;
+    if (isGoal && isGoal(i)) return { dist, prev, s, goal: i };
+    const x = i % W, y = (i / W) | 0;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      if (!dx && !dy) continue;
+      const nx = x + dx, ny = y + dy;
+      if (!walkable(nx, ny)) continue;
+      const diag = dx && dy;
+      if (diag && (!walkable(x + dx, y) || !walkable(x, y + dy))) continue;
+      const ni = idx(nx, ny), nd = d + (diag ? 1.414 : 1) * (pile[ni] === RUBBLE ? 2 : 1);
+      if (nd < dist[ni]) { dist[ni] = nd; prev[ni] = i; push([nd, ni]); }
+    }
+  }
+  return { dist, prev, s, goal: -1 };
+}
+function trace(prev, s, g) { const p = []; let c = g; while (c !== s) { p.push(c); c = prev[c]; } return p.reverse(); }
+function findPath(sx, sy, isGoal) { const r = dijkstra(sx, sy, isGoal); return r.goal < 0 ? null : trace(r.prev, r.s, r.goal); }
+function approachTiles(i) {
+  const x = i % W, y = (i / W) | 0, out = [];
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (walkable(x + dx, y + dy)) out.push(idx(x + dx, y + dy));
+  return out;
+}
+function ringTiles(b) {
+  const out = [];
+  for (let y = b.y - 1; y <= b.y + b.h; y++) for (let x = b.x - 1; x <= b.x + b.w; x++) if (walkable(x, y)) out.push(idx(x, y));
+  return out;
+}
+
+// ---------- reveal (sight spreads through open floor) ----------
+const stamp = { arr: null, n: 0 };
+function revealFrom(sx, sy, maxD) {
+  if (!stamp.arr) stamp.arr = new Uint32Array(W * H);
+  stamp.n++;
+  const q = [[sx, sy, 0]]; stamp.arr[idx(sx, sy)] = stamp.n;
+  while (q.length) {
+    const [x, y, d] = q.shift();
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (inb(x + dx, y + dy)) revealed[idx(x + dx, y + dy)] = 1;
+    if (d >= maxD) continue;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = x + dx, ny = y + dy;
+      if (!inb(nx, ny)) continue;
+      const ni = idx(nx, ny);
+      if (stamp.arr[ni] === stamp.n || tType[ni] !== FLOOR) continue;
+      stamp.arr[ni] = stamp.n; q.push([nx, ny, d + 1]);
+    }
+  }
+}
+function revealAll() { for (const u of units) { const [x, y] = tileOf(u); revealFrom(x, y, 11); } }
+const discovered = b => revealed[idx(b.x, b.y)] === 1;
+
+// ---------- items ----------
+function spawnItem(type, x, y) { items.push({ id: nextId++, type, x, y, claim: null }); }
+function itemAt(wx, wy, r = 13) {
+  let best = null, bd = r;
+  for (const it of items) { const d = Math.hypot(it.x - wx, it.y - wy); if (d < bd) { bd = d; best = it; } }
+  return best;
+}
+const ITEM_NAME = { crystal: "power crystal", ore: "ore", core: "power core", red: "mining pack", blue: "clearing pack", green: "gathering pack" };
+function accepts(b, type) {
+  if (b.kind === "cc") return type === "ore" || type === "core" || PACKS.includes(type);
+  if (b.kind === "plant") return type === "crystal";
+  if (b.kind === "terminal") return !b.active && discovered(b) && ((type === "ore" && b.ore + pendingTo(b, "ore") < NEED_ORE) || (type === "crystal" && b.crystal + pendingTo(b, "crystal") < NEED_CRY));
+  return false;
+}
+function canTake(b, type) {
+  if (b.kind === "terminal") return !b.active && ((type === "ore" && b.ore < NEED_ORE) || (type === "crystal" && b.crystal < NEED_CRY));
+  return accepts(b, type);
+}
+function pendingTo(b, type) { return units.filter(u => u.task && u.task.t === "deliver" && u.task.b === b && u.carry === type).length; }
+function defaultTarget(type) {
+  const term = B("terminal");
+  if (type !== "core" && accepts(term, type)) return term;
+  return type === "crystal" ? B("plant") : B("cc");
+}
+function deposit(u, b) {
+  const type = u.carry;
+  if (!canTake(b, type)) { toast(`The ${label(b)} doesn’t take ${ITEM_NAME[type]}.`); return; }
+  u.carry = null;
+  const [cx, cy] = bCenter(b);
+  burst(cx, cy, type === "ore" ? "#9fb9db" : "#ffb547", 14);
+  if (b.kind === "plant") { b.crystals++; flashCell = capacity() - 1; }
+  else if (b.kind === "cc" && type === "ore") b.ore++;
+  else if (b.kind === "cc" && PACKS.includes(type)) b.packs[type]++;
+  else if (b.kind === "cc" && type === "core") { b.core = true; burst(cx, cy, "#fff1d0", 40); toast("Power core installed in the command center."); }
+  else if (b.kind === "terminal") { if (type === "ore") b.ore++; else b.crystal++; }
+  renderPower(); renderSel(true);
+}
+const bCenter = b => [(b.x + b.w / 2) * TS, (b.y + b.h / 2) * TS];
+const LABELS = { cc: "command center", printer: "drone printer", plant: "power plant", terminal: "main terminal" };
+const label = b => LABELS[b.kind];
+
+// ---------- commands ----------
+function command(wx, wy, shift) {
+  const sel = units.filter(u => u.sel);
+  const tx = Math.floor(wx / TS), ty = Math.floor(wy / TS);
+  if (!inb(tx, ty)) return;
+  const i = idx(tx, ty);
+  if (!revealed[i]) { toast("That area is still dark. Move a drone closer to see it."); return; }
+  const it = sel.length ? itemAt(wx, wy) : null;
+  if (it) {
+    if (!sel.some(canHaul)) { toast("Drones with a mining pack can’t haul."); return; }
+    const free = sel.filter(u => !u.carry && canHaul(u)).sort((a, b) => Math.hypot(a.x - it.x, a.y - it.y) - Math.hypot(b.x - it.x, b.y - it.y));
+    if (!free.length) { toast("Those drones already have their hands full."); return; }
+    const u = free[0];
+    for (const o of units) if (o.task && o.task.t === "fetch" && o.task.item === it) { o.task = null; o.path = []; }
+    it.claim = u.id; u.holdT = 0;
+    setTask(u, { t: "fetch", item: it }, [idx(Math.floor(it.x / TS), Math.floor(it.y / TS))]);
+    ping(it.x, it.y);
+    return;
+  }
+  const t0 = tType[i];
+  if (bldAt[i] < 0 && (isMineable(t0) || pile[i])) { markJob(i, sel, shift); return; }
+  if (t0 === BED) { toast("That’s bedrock. Nothing can dig through it."); return; }
+  if (!sel.length) return;
+  for (const u of sel) u.holdT = 0;
+  if (bldAt[i] >= 0) {
+    const b = buildings[bldAt[i]];
+    const term = b.kind === "terminal";
+    if (term && b.active) { toast("The main terminal is already online."); return; }
+    const ready = term && b.ore >= NEED_ORE && b.crystal >= NEED_CRY;
+    for (const u of sel) {
+      if (u.carry && canTake(b, u.carry)) setTask(u, { t: "deliver", b }, ringTiles(b));
+      else if (ready) setTask(u, { t: "repair", b }, ringTiles(b));
+      else if (setTask(u, { t: "goto", b }, ringTiles(b))) u.auto = false;
+    }
+    if (term && !ready && !sel.some(u => u.carry)) toast(`The terminal still needs ${Math.max(0, NEED_ORE - b.ore)} ore and ${Math.max(0, NEED_CRY - b.crystal)} crystals.`);
+    ping(...bCenter(b));
+    return;
+  }
+  // move: spread the group over nearby free tiles
+  const spots = []; const seen = new Set([i]); const q = [i];
+  while (q.length && spots.length < sel.length) {
+    const c = q.shift(); const cx = c % W, cy = (c / W) | 0;
+    if (walkable(cx, cy)) spots.push(c);
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const n = idx(cx + dx, cy + dy); if (inb(cx + dx, cy + dy) && !seen.has(n) && tType[n] === FLOOR) { seen.add(n); q.push(n); } }
+  }
+  if (!spots.length) { toast("Nobody can stand there."); return; }
+  const order = sel.slice().sort((a, b) => Math.hypot(a.x - wx, a.y - wy) - Math.hypot(b.x - wx, b.y - wy));
+  order.forEach((u, k) => { if (setTask(u, { t: "move" }, [spots[k % spots.length]])) u.auto = false; });
+  ping(...center(i));
+}
+function markJob(i, sel, shift) {
+  const t = tType[i];
+  if (jobs.has(i) && !sel.length) { jobs.delete(i); for (const o of units) if (o.task && o.task.i === i) { o.task = null; o.path = []; } toast("Job removed."); return; }
+  if (!jobs.has(i)) jobs.set(i, ++jobSeq);
+  ping(...center(i));
+  const kind = jobKind(i);
+  if (sel.length) {
+    // a direct order: the selected drones start on this job now, then carry on with auto-work
+    const able = sel.filter(u => kind === "clear" ? canClear(u) : canMine(u, t));
+    if (!able.length) toast(kind === "mine" && t === ROCK ? "Queued. Only the Captain can cut hard rock." : "Queued. None of the selected drones can do that job.");
+    else if (able.length < sel.length) toast(kind === "mine" && t === ROCK ? "Only the Captain can cut hard rock. The others carry on with auto-work." : "Some selected drones can’t do that job. They carry on with auto-work.");
+    const free = approachTiles(i), taken = new Set();
+    for (const u of able) {
+      u.auto = true; u.holdT = 0;
+      const opts = free.filter(j => !taken.has(j));
+      if (setTask(u, { t: kind, i }, opts.length ? opts : free)) taken.add(u.path.length ? u.path[u.path.length - 1] : idx(...tileOf(u)));
+    }
+    for (const u of sel) if (!able.includes(u)) { u.auto = true; u.holdT = 0; u.thinkT = 0; }
+    renderSel(true);
+  } else if (kind === "mine" && t === ROCK && !captain()) toast("Queued. Only the Captain can cut hard rock.");
+  else if (!units.some(u => u.auto)) toast("Queued. Every drone is on manual. Select one and right-click the job, or turn its Auto-work back on.");
+  for (const u of units) if (!u.task && !u.path.length) u.thinkT = 0;   // idle auto drones check the queue right away
+}
+function setTask(u, task, goals) {
+  const [x, y] = tileOf(u), set = new Set(goals);
+  if (set.has(idx(x, y))) { u.task = task; u.path = []; u.blocked = false; return true; }
+  const p = set.size ? findPath(x, y, j => set.has(j)) : null;
+  if (p) { u.path = p; u.task = task; u.blocked = false; return true; }
+  u.task = null; u.path = [];
+  toast(`${u.name} can’t find a way there.`);
+  return false;
+}
+
+// ---------- unit update ----------
+function adjacentTo(u, i) {
+  const [x, y] = tileOf(u); const tx = i % W, ty = (i / W) | 0;
+  return Math.abs(x - tx) + Math.abs(y - ty) === 1;
+}
+function nextToBuilding(u, b) {
+  const [x, y] = tileOf(u);
+  return x >= b.x - 1 && x <= b.x + b.w && y >= b.y - 1 && y <= b.y + b.h;
+}
+function updateUnit(u, dt) {
+  u.bob += dt * 6;
+  if (u.promoT > 0) u.promoT = Math.max(0, u.promoT - dt);
+  if (u.path.length) {
+    const nx = u.path[0] % W, ny = (u.path[0] / W) | 0;
+    if (!walkable(nx, ny)) { u.path = []; if (u.task) u.task = null; return; }
+    const [tx, ty] = center(u.path[0]);
+    const dx = tx - u.x, dy = ty - u.y, d = Math.hypot(dx, dy), st = speedOf(u) * dt;
+    if (d > .01) u.dir = Math.atan2(dy, dx);
+    if (d <= st) { u.x = tx; u.y = ty; u.path.shift(); }
+    else { u.x += dx / d * st; u.y += dy / d * st; }
+    return;
+  }
+  const k = u.task;
+  if (!k) {
+    if (u.carry) { u.retry = (u.retry || 0) - dt; if (u.retry <= 0) { u.retry = 3; const b = defaultTarget(u.carry); const [x, y] = tileOf(u); const ring = new Set(ringTiles(b)); const p = findPath(x, y, j => ring.has(j)); if (p) { u.path = p; u.task = { t: "deliver", b }; u.blocked = false; } } return; }
+    if (u.holdT > 0) { u.holdT -= dt; return; }
+    u.thinkT -= dt;
+    if (u.thinkT <= 0) { u.thinkT = .35 + Math.random() * .2; if (!unstack(u) && u.auto) think(u); }
+    return;
+  }
+  if (k.t === "move" || k.t === "goto") { u.task = null; return; }
+
+  if (k.t === "mine") {
+    const i = k.i;
+    if (!isMineable(tType[i]) || !canMine(u, tType[i])) { u.task = null; u.thinkT = 0; return; }
+    if (!adjacentTo(u, i)) { if (!setTask(u, k, approachTiles(i))) u.task = null; return; }
+    face(u, i);
+    tHp[i] -= workOf(u) * dt;
+    if (Math.random() < dt * 14) spark(u, i, tType[i] === SEAM ? "#ffb547" : tType[i] === ANOM ? "#b48cff" : tType[i] === OREV ? "#9fb9db" : "#c9b08f");
+    if (tHp[i] <= 0) breakWall(i);
+    return;
+  }
+  if (k.t === "clear") {
+    const i = k.i;
+    if (!pile[i] || !canClear(u)) { u.task = null; u.thinkT = 0; return; }
+    if (!adjacentTo(u, i)) { if (!setTask(u, k, approachTiles(i))) u.task = null; return; }
+    face(u, i);
+    pHp[i] -= clearOf(u) * dt;
+    if (Math.random() < dt * 10) spark(u, i, pile[i] === WRECK ? "#aab3c2" : "#a08e74");
+    if (pHp[i] <= 0) clearPile(i);
+    return;
+  }
+  if (k.t === "fetch") {
+    const it = k.item;
+    if (!items.includes(it) || it.claim !== u.id || !canHaul(u)) { u.task = null; return; }
+    items.splice(items.indexOf(it), 1);
+    u.carry = it.type;
+    const b = defaultTarget(it.type);
+    setTask(u, { t: "deliver", b }, ringTiles(b));
+    return;
+  }
+  if (k.t === "deliver") {
+    if (!u.carry) { u.task = null; return; }
+    if (!nextToBuilding(u, k.b)) { if (!setTask(u, k, ringTiles(k.b))) u.task = null; return; }
+    deposit(u, k.b);
+    u.task = null; u.thinkT = 0;
+    return;
+  }
+  if (k.t === "install" || k.t === "uninstall") {
+    const cc = B("cc");
+    if (!nextToBuilding(u, cc)) { if (!setTask(u, k, ringTiles(cc))) u.task = null; return; }
+    u.dir = Math.atan2(bCenter(cc)[1] - u.y, bCenter(cc)[0] - u.x);
+    k.w = (k.w || 0) + dt;
+    if (k.w < 1.5) return;
+    if (k.t === "install") {
+      if (cc.packs[k.color] > 0 && u.packs.length < u.slots) {
+        cc.packs[k.color]--; u.packs.push(k.color); u.focus = PACK_FOCUS[k.color];
+        burst(u.x, u.y, PACK_COLOR[k.color], 26); toast(`${dispName(u)} fitted with a ${ITEM_NAME[k.color]}.`);
+      } else toast(`No ${ITEM_NAME[k.color]} left in the command center.`);
+    } else {
+      const j = u.packs.indexOf(k.color);
+      if (j >= 0) { u.packs.splice(j, 1); cc.packs[k.color]++; toast(`${dispName(u)} returned a ${ITEM_NAME[k.color]}.`); }
+    }
+    u.task = null; u.thinkT = 0; renderSel(true);
+    return;
+  }
+  if (k.t === "repair") {
+    const b = k.b;
+    if (b.active) { u.task = null; return; }
+    if (!nextToBuilding(u, b)) { if (!setTask(u, k, ringTiles(b))) u.task = null; return; }
+    u.dir = Math.atan2(bCenter(b)[1] - u.y, bCenter(b)[0] - u.x);
+    b.repair += baseOf(u) * dt;
+    if (Math.random() < dt * 8) { const [cx, cy] = bCenter(b); particles.push({ x: cx + (Math.random() - .5) * 40, y: cy + (Math.random() - .5) * 40, vx: 0, vy: -30, life: .6, max: .6, c: "#5fe0d0", s: 2 }); }
+    if (b.repair >= REPAIR_NEED) { b.active = true; winTimer = 1.8; burst(...bCenter(b), "#5fe0d0", 60); for (const o of units) if (o.task && o.task.t === "repair") o.task = null; }
+  }
+}
+
+// idle brain. Jobs go oldest-first (in marking order); a job takes as many helpers as it has open sides.
+// Focus decides what a drone looks for first: clear = haul, then clear rubble, then mine;
+// mine = mine, then clear, then haul; collect = haul and clear rubble, never mines.
+const FOCUS_ORDER = { all: ["item", "clear", "mine"], mine: ["mine"], clear: ["clear"], collect: ["item"] };
+const ALLOWED = { item: canHaul, clear: canClear, mine: u => !has(u, "blue") };
+function think(u) {
+  const [x, y] = tileOf(u);
+  const { dist, prev, s } = dijkstra(x, y, null);
+  let wanted = false;
+  const list = [...jobs.entries()].sort((a, b) => a[1] - b[1]);
+  const pickJob = kind => {
+    for (const [j] of list) {
+      const k = jobKind(j);
+      if (!k) { jobs.delete(j); continue; }
+      if (k !== kind) continue;
+      const ap = approachTiles(j);
+      const busy = units.filter(o => o !== u && o.task && (o.task.t === "mine" || o.task.t === "clear") && o.task.i === j).length;
+      if (ap.length && busy >= ap.length) continue;
+      if (k === "mine" && !canMine(u, tType[j])) { wanted = true; continue; }
+      let best = -1, bd = Infinity;
+      for (const a of ap) if (dist[a] < bd) { bd = dist[a]; best = a; }
+      if (best < 0) { wanted = true; continue; }
+      return { task: { t: k, i: j }, goal: best };
+    }
+    return null;
+  };
+  const pickItem = () => {
+    let best = null, bd = Infinity;
+    for (const it of items) {
+      if (units.some(o => o !== u && o.task && o.task.t === "fetch" && o.task.item === it)) continue;
+      const ti = idx(Math.floor(it.x / TS), Math.floor(it.y / TS));
+      if (dist[ti] < bd) { bd = dist[ti]; best = it; }
+      else if (dist[ti] === Infinity) wanted = true;
+    }
+    if (!best) return null;
+    return { task: { t: "fetch", item: best }, goal: idx(Math.floor(best.x / TS), Math.floor(best.y / TS)) };
+  };
+  for (const c of FOCUS_ORDER[u.focus]) {
+    if (!ALLOWED[c](u)) { if (c === "item" ? items.length : list.some(([j]) => jobKind(j) === c)) wanted = true; continue; }
+    const r = c === "item" ? pickItem() : pickJob(c);
+    if (r) {
+      if (r.task.t === "fetch") r.task.item.claim = u.id;
+      u.task = r.task; u.path = r.goal === s ? [] : trace(prev, s, r.goal); u.blocked = false;
+      return;
+    }
+  }
+  u.blocked = wanted;
+}
+// two idle drones on one tile: one steps aside so nobody hides inside anyone else
+function unstack(u) {
+  const [x, y] = tileOf(u), here = idx(x, y);
+  const occ = new Set(units.filter(o => o !== u && !o.path.length).map(o => idx(...tileOf(o))));
+  if (!occ.has(here)) return false;
+  const p = findPath(x, y, j => !occ.has(j) && j !== here);
+  if (p && p.length <= 4) { u.path = p; return true; }
+  return false;
+}
+function face(u, i) { const [cx, cy] = center(i); u.dir = Math.atan2(cy - u.y, cx - u.x); }
+const DROPS = { [DIRT]: i => rnd(i, 7) < .2 ? ["ore"] : [], [OREV]: () => ["ore", "ore"], [SEAM]: () => ["crystal"], [ANOM]: () => ["core", "crystal", "crystal"], [ROCK]: () => ["ore"] };
+function breakWall(i) {
+  const t = tType[i];
+  tType[i] = FLOOR; pile[i] = RUBBLE; pHp[i] = pMax[i] = HARD[t];
+  const drops = DROPS[t](i);
+  if (drops.length) buried.set(i, drops);
+  // a marked wall stays marked: the job simply becomes clearing its rubble
+  const [cx, cy] = center(i);
+  burst(cx, cy, t === ANOM ? "#b48cff" : t === SEAM ? "#ffb547" : t === OREV ? "#9fb9db" : "#9c8a72", 22);
+  if (t === ANOM) toast("Something under that rubble is giving off the Captain’s signal.");
+  for (const o of units) if (o.task && o.task.t === "mine" && o.task.i === i) { o.task = null; o.thinkT = 0; }
+  revealAll();
+}
+function clearPile(i) {
+  const wasWreck = pile[i] === WRECK;
+  pile[i] = 0; jobs.delete(i);
+  const [cx, cy] = center(i);
+  const found = buried.get(i) || []; buried.delete(i);
+  found.forEach((type, k) => { const a = k * 2.1; spawnItem(type, cx + (k ? Math.cos(a) * 8 : 0), cy + (k ? Math.sin(a) * 8 : 0)); });
+  burst(cx, cy, wasWreck ? "#8d96a6" : "#a08e74", 12);
+  for (const o of units) if (o.task && o.task.t === "clear" && o.task.i === i) { o.task = null; o.thinkT = 0; }
+  revealAll();
+}
+function separate(dt) {
+  for (let a = 0; a < units.length; a++) for (let b = a + 1; b < units.length; b++) {
+    const A = units[a], Bu = units[b];
+    if (A.path.length || Bu.path.length) continue;
+    const dx = Bu.x - A.x, dy = Bu.y - A.y, d = Math.hypot(dx, dy) || .01;
+    if (d < 18) {
+      const p = (18 - d) * 6 * dt;
+      nudge(A, -dx / d * p, -dy / d * p); nudge(Bu, dx / d * p, dy / d * p);
+    }
+  }
+}
+function nudge(u, dx, dy) {
+  const [tx, ty] = tileOf(u), cx = (tx + .5) * TS, cy = (ty + .5) * TS;
+  u.x = Math.max(cx - 11, Math.min(cx + 11, u.x + dx));
+  u.y = Math.max(cy - 11, Math.min(cy + 11, u.y + dy));
+}
+
+// ---------- printer, promotion ----------
+function queuePrint(kind) {
+  const p = B("printer");
+  if (p.queue.length + (p.cur ? 1 : 0) >= QUEUE_MAX) { toast(`The printer queue is full (${QUEUE_MAX} orders).`); return; }
+  p.queue.push(kind); renderSel(true);
+}
+const printDrone = () => queuePrint("drone");
+function updatePrinter(dt) {
+  const p = B("printer"), cc = B("cc");
+  if (!p.cur && p.queue.length) {
+    const k = p.queue[0];
+    if (k === "drone" ? used() < capacity() : cc.ore >= PACK_COST) {
+      p.queue.shift(); p.cur = k; p.total = p.timer = k === "drone" ? PRINT_TIME : PACK_TIME;
+      if (k !== "drone") cc.ore -= PACK_COST;
+      renderPower(); renderSel(true);
+    }
+  }
+  if (p.cur) { p.timer -= dt; if (p.timer <= 0) { const k = p.cur; p.cur = null; p.timer = 0; finishPrint(k); renderPower(); renderSel(true); } }
+}
+function printerWait() {
+  const p = B("printer");
+  if (p.cur || !p.queue.length) return "";
+  return p.queue[0] === "drone" ? "Waiting for a free power cell" : `Waiting for ore (${B("cc").ore} of ${PACK_COST})`;
+}
+function finishPrint(k) {
+  const p = B("printer"), ring = ringTiles(p);
+  const spot = ring.find(j => ((j / W) | 0) === p.y + p.h) ?? ring[0];
+  const [x, y] = [spot % W, (spot / W) | 0];
+  if (k === "drone") {
+    const u = addUnit(NAMES[nameIdx++ % NAMES.length], x, y);
+    burst(u.x, u.y, "#5fe0d0", 20);
+    openName(u, true);
+  } else {
+    const [cx, cy] = center(spot);
+    spawnItem(k, cx + (Math.random() - .5) * 10, cy + (Math.random() - .5) * 10);
+    burst(cx, cy, PACK_COLOR[k], 18);
+    toast(`${PACK_NAME[k]} printed. A drone will carry it to the command center.`);
+  }
+}
+function openName(u, fresh) {
+  pendingName = u;
+  $("nameTitle").textContent = fresh ? "New drone printed" : "Rename";
+  $("nameSub").textContent = fresh ? "Give it a name. It stays with your crew from level to level." : "Pick a new name.";
+  $("nameIn").value = u.name;
+  show("nameOv", true);
+  setTimeout(() => { $("nameIn").focus(); $("nameIn").select(); }, 30);
+}
+function closeName() {
+  if (!pendingName) return;
+  const v = $("nameIn").value.trim();
+  if (v) pendingName.name = v.slice(0, 16);
+  pendingName = null; show("nameOv", false); renderSel(true);
+}
+function promote(u) {
+  const cc = B("cc");
+  if (!cc.core || captain() || u.captain) return;
+  const was = u.name;
+  u.packs.forEach((c, k) => spawnItem(c, u.x + (k - .5) * 12, u.y + 10));
+  if (u.packs.length) toast(`${was} set down its ${u.packs.map(c => ITEM_NAME[c]).join(" and ")}.`);
+  u.packs = []; u.slots = 3;
+  u.captain = true; u.promoT = 1.6; u.name = "Captain"; u.auto = true;
+  cc.core = "used";
+  burst(u.x, u.y, "#f2c14e", 60); burst(u.x, u.y, "#ffffff", 25);
+  freedFlash = true;
+  renderPower(); renderSel(true);
+  setTimeout(() => { $("promoTitle").textContent = `${was} is now the Captain`; show("promoOv", true); }, 900);
+}
+
+// ---------- tutorial steps ----------
+const T = (x, y) => [(x + .5) * TS, (y + .5) * TS];
+const anyItem = type => items.some(i => i.type === type) || units.some(u => u.carry === type) || [...buried.values()].some(l => l.includes(type));
+const firstOpen = list => { for (const [x, y] of list) { const i = idx(x, y); if (isMineable(tType[i]) || pile[i]) return T(x, y); } return null; };
+const STEPS = [
+  { msg: "Core OS online. One drone is answering. Left-click it to select it, then right-click the open space at the end of the tunnel to send it there.",
+    target: () => T(13, 17), done: () => units.some(u => tileOf(u)[0] >= 12) },
+  { msg: "Wreckage. A command center, a drone printer and a power plant survived the crash, and the command center is what’s keeping your one drone alive. There’s a crystal vein behind the soft rock to the east. With your drone selected, right-click the rock. A drone given a job goes back to auto-work, so it mines, clears the rubble and hauls what it finds on its own. Queue the vein the same way once it’s exposed.",
+    target: () => firstOpen([[27, 15], [28, 15]]) || bCenter(B("plant")), prog: () => `Crystals stored: ${Math.min(1, B("plant").crystals)} of 1`, done: () => B("plant").crystals >= 1 },
+  { msg: "Each stored crystal adds a power cell (top left). Click the drone printer, then press Print drone.",
+    target: () => bCenter(B("printer")), done: () => drones().length >= 2 },
+  { msg: "A third drone needs a third power cell. Another crystal vein lies north of the wreck, behind several blocks of soft rock. Right-click each block to queue it. Jobs are worked in the order you queue them.",
+    target: () => firstOpen([[20, 11], [20, 10], [20, 9], [20, 8], [20, 7], [20, 6], [20, 5]]) || bCenter(B("plant")), prog: () => `Crystals stored: ${Math.min(2, B("plant").crystals)} of 2`, done: () => B("plant").crystals >= 2 },
+  { msg: "Power for three. Print your third drone.",
+    target: () => bCenter(B("printer")), prog: () => `Drones: ${drones().length} of 3`, done: () => drones().length + (captain() ? 1 : 0) >= 3 },
+  { msg: "Core OS is picking up a weird reading to the south. Wreckage and soft rock block the way. Mark a path through, and mark the glowing source at the end of the tunnel once you can see it.",
+    target: () => firstOpen([[20, 25], [20, 26], [20, 27], [21, 28], [22, 28], [24, 28], [25, 28], [26, 28], [27, 28], [28, 28], [30, 28], [31, 28], [34, 28]]), done: () => anyItem("core") || B("cc").core },
+  { msg: "The source was a power core, and it carries the Captain’s signature. It’s buried in the rubble. Once it’s dug out, a drone will carry it to the command center.",
+    target: () => { const c = items.find(i => i.type === "core"); return c ? [c.x, c.y] : !B("cc").core ? T(34, 28) : bCenter(B("cc")); }, done: () => !!B("cc").core },
+  { msg: "Core installed. Select one drone and press Promote to Captain in its panel (bottom right). Choose well. This one leads the crew.",
+    target: () => bCenter(B("cc")), done: () => !!captain() },
+  { msg: "The Captain draws no power, so the crew has room to grow. Store the anomaly’s two crystals, then print drones until you have five plus the Captain.",
+    target: () => bCenter(B("printer")), prog: () => `Drones: ${drones().length} of 5, crystals stored: ${B("plant").crystals} of 4`, done: () => drones().length >= 5 },
+  { msg: "Scans place the ship’s main terminal just past the anomaly, behind hard rock. Only the Captain can cut hard rock. Mark the rock beside the anomaly site.",
+    target: () => firstOpen([[35, 28], [35, 27]]) || T(36, 27), done: () => discovered(B("terminal")) },
+  { msg: "Main terminal found. Mark the ore and crystal veins around it, plus any hard rock for the Captain. Everything the crew digs up now goes straight to the terminal.",
+    target: () => bCenter(B("terminal")), prog: () => { const t = B("terminal"); return `Ore: ${t.ore} of ${NEED_ORE}, crystals: ${t.crystal} of ${NEED_CRY}`; }, done: () => { const t = B("terminal"); return t.ore >= NEED_ORE && t.crystal >= NEED_CRY; } },
+  { msg: "Materials are in place. Press Q to select the whole crew, then right-click the terminal to repair it.",
+    target: () => bCenter(B("terminal")), done: () => B("terminal").active },
+];
+let lastProg = "";
+function updateObjective(force) {
+  let changed = force;
+  while (step < STEPS.length && STEPS[step].done()) { step++; changed = true; }
+  const prog = !freePlay && step < STEPS.length && STEPS[step].prog ? STEPS[step].prog() : freePlay ? `Drones: ${drones().length}${captain() ? " plus the Captain" : ""}. Terminal: ${B("terminal").ore} of ${NEED_ORE} ore, ${B("terminal").crystal} of ${NEED_CRY} crystals` : "";
+  if (prog !== lastProg) { lastProg = prog; $("objProg").textContent = prog; $("objProg").hidden = !prog; }
+  if (!changed) return;
+  if (freePlay) {
+    $("objStep").textContent = "Free play";
+    $("objMsg").textContent = `Wake five drones and the Captain, then bring ${NEED_ORE} ore and ${NEED_CRY} crystals to the main terminal and repair it.`;
+  } else if (step < STEPS.length) {
+    $("objStep").textContent = `Core OS, step ${step + 1} of ${STEPS.length}`;
+    $("objMsg").textContent = STEPS[step].msg;
+  } else {
+    $("objStep").textContent = "Core OS";
+    $("objMsg").textContent = "Main terminal online. Linking this section to the rest of the ship…";
+  }
+  const o = $("obj"); o.classList.remove("pulse"); void o.offsetWidth; o.classList.add("pulse");
+}
+
+// ---------- HUD ----------
+const $ = id => document.getElementById(id);
+const show = (id, on) => $(id).classList.toggle("show", on);
+let lastCells = "", flashCell = -1, freedFlash = false;
+function renderPower() {
+  const cap = capacity(), us = used(), printing = B("printer").cur === "drone", ds = drones(), c = captain();
+  const key = cap + "/" + us + "/" + printing + "/" + flashCell + "/" + freedFlash + "/" + ds.map(u => u.id).join() + "/" + (c ? c.id : "");
+  if (key !== lastCells) {
+    lastCells = key;
+    $("pnum").innerHTML = `${us} <small>/ ${cap}</small>`;
+    const cells = $("cells"); cells.innerHTML = "";
+    for (let k = 0; k < cap; k++) {
+      const u = ds[k];
+      const el = document.createElement(u ? "button" : "div");
+      el.className = "cell" + (u ? " on" : (printing && k === ds.length ? " pending" : ""));
+      if (u) { el.dataset.uid = u.id; el.setAttribute("aria-label", u.name); }
+      if (k === flashCell || (freedFlash && k === ds.length)) el.classList.add("flash");
+      cells.appendChild(el);
+    }
+    flashCell = -1; freedFlash = false;
+    const cb = $("captBtn");
+    $("capt").classList.toggle("show", !!c);
+    if (c) { cb.dataset.uid = c.id; cb.setAttribute("aria-label", dispName(c)); $("captName").textContent = dispName(c); }
+  }
+  for (const el of document.querySelectorAll("[data-uid]")) { const u = units.find(o => o.id === +el.dataset.uid); el.classList.toggle("sel", !!(u && u.sel)); }
+  const idle = units.filter(isIdle).length, blocked = units.filter(u => u.blocked && !u.task && !u.path.length).length;
+  const sk = idle + "/" + blocked;
+  if (sk !== lastStat) {
+    lastStat = sk;
+    const parts = [];
+    if (idle) parts.push(`<button class="stat-btn" data-pick="idle">${idle} idle</button>`);
+    if (blocked) parts.push(`<button class="stat-btn warn" data-pick="blocked">${blocked} blocked</button>`);
+    $("crewStat").innerHTML = parts.length ? parts.join("") : `<span>All crew working</span>`;
+  }
+  if (tipUnit) showTip(tipUnit);
+}
+let tipUnit = null, lastStat = "";
+const isIdle = u => !u.task && !u.path.length && !u.carry && !u.blocked && u.holdT <= 0;
+function showTip(u) {
+  if (!units.includes(u)) { hideTip(); return; }
+  tipUnit = u;
+  const t = $("tip");
+  t.innerHTML = `<b>${esc(dispName(u))}${packSquares(u)}</b><span>${statusOf(u)}</span>`;
+  t.classList.add("show");
+}
+function hideTip() { tipUnit = null; $("tip").classList.remove("show"); }
+function rosterUnit(e) { const el = e.target.closest("[data-uid]"); return el ? units.find(o => o.id === +el.dataset.uid) : null; }
+let selKey = "";
+let upgradeOpen = null;
+function renderSel(force) {
+  const sel = units.filter(u => u.sel), el = $("sel"), cc = B("cc"), pr = B("printer");
+  let key;
+  const shared = JSON.stringify(cc.packs) + cc.ore + "|" + (pr.cur || "") + pr.queue.join() + printerWait() + "|" + capacity() + used();
+  if (selBuilding) { const b = selBuilding; key = "b" + b.id + JSON.stringify(b, (k, v) => k === "timer" ? undefined : v) + shared; }
+  else key = "u" + sel.map(u => u.id + u.name + u.captain + u.auto + u.focus + u.packs.join("") + (u.carry || "") + (u.task ? u.task.t : "")).join() + "|" + cc.core + (captain() ? 1 : 0) + upgradeOpen + shared;
+  if (!force && key === selKey) { const st = $("selStatus"); if (st && sel.length === 1) st.textContent = statusOf(sel[0]); return; }
+  selKey = key;
+  if (!selBuilding && !sel.length) { el.hidden = true; return; }
+  el.hidden = false;
+  if (selBuilding) {
+    const b = selBuilding, p = B("plant");
+    const info = {
+      cc: () => ["The ship’s brain, salvaged. It supplies 1 power on its own, stores ore and upgrade packs, and fits packs to drones. Install a power core here to wake a named crew member.", [["Power supplied", "1"], ["Ore stored", b.ore], ...PACKS.map(c => [`<i class="pk" style="background:${PACK_COLOR[c]}"></i>${PACK_NAME[c]}s`, b.packs[c]]), ["Power core", b.core === true ? "Installed" : b.core === "used" ? "Awakened" : "None"]]],
+      printer: () => [`Prints drones and upgrade packs. Orders run one at a time, up to ${QUEUE_MAX} in the queue.`, [["Power in use", `${used()} of ${capacity()}`], ["Ore in command center", cc.ore], ["Now", b.cur ? `Printing ${b.cur === "drone" ? "a drone" : "a " + ITEM_NAME[b.cur]}…` : printerWait() || "Ready"]]],
+      plant: () => ["Every crystal stored here adds 1 power cell.", [["Crystals stored", p.crystals], ["Power added", p.crystals]]],
+      terminal: () => ["Repair it to link this section to the rest of the ship.", [["Ore", `${b.ore} of ${NEED_ORE}`], ["Crystals", `${b.crystal} of ${NEED_CRY}`], ["Repair", b.active ? "Online" : `${Math.floor(b.repair / REPAIR_NEED * 100)}%`]]],
+    }[b.kind]();
+    let extra = "";
+    if (b.kind === "printer" && (freePlay || p.crystals > 0)) {
+      const full = b.queue.length + (b.cur ? 1 : 0) >= QUEUE_MAX;
+      const freeCells = Math.max(0, capacity() - used()), queuedDrones = b.queue.filter(k => k === "drone").length, afford = Math.floor(cc.ore / PACK_COST);
+      extra = (b.queue.length ? `<div class="queue">Queue: ${b.queue.map((k, n) => `<button class="qchip" data-dq="${n}" title="Remove from queue">${k === "drone" ? "Drone" : `<i class="pk" style="background:${PACK_COLOR[k]}"></i>`} ×</button>`).join("")}</div>` : "") +
+        `<section class="psec"><h4>Drones</h4><p>A new crew member. Each active drone uses 1 power cell. Store crystals in the power plant for more cells.</p>
+          <table><tr><td>Cost</td><td>1 power cell</td></tr><tr><td>Can deploy now</td><td>${freeCells}${queuedDrones ? ` (${queuedDrones} queued)` : ""}</td></tr></table>
+          <div class="actions"><button data-q="drone" ${full ? "disabled" : ""}>Print drone</button></div></section>
+        <section class="psec"><h4>Upgrade packs</h4><p>Each pack makes a drone better at one job, with a trade-off. Packs go to the command center, where drones are fitted with them.</p>
+          <table><tr><td>Cost</td><td>${PACK_COST} ore each</td></tr><tr><td>Ore available</td><td>${cc.ore} (enough for ${afford})</td></tr></table>
+          <div class="packlist">${PACKS.map(c => `<button class="ghost" data-q="${c}" ${full ? "disabled" : ""}><i class="pk" style="background:${PACK_COLOR[c]}"></i><b>${PACK_NAME[c]}</b><span>${PACK_INFO[c]}</span></button>`).join("")}</div></section>`;
+    }
+    el.innerHTML = `<h3>${cap1(label(b))}</h3><div class="role">Building</div><p>${info[0]}</p><table${b.kind === "printer" ? ' class="ptop"' : ""}>${info[1].map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join("")}</table>${extra}`;
+    for (const btn of el.querySelectorAll("[data-q]")) btn.onclick = () => queuePrint(btn.dataset.q);
+    for (const btn of el.querySelectorAll("[data-dq]")) btn.onclick = () => { b.queue.splice(+btn.dataset.dq, 1); renderSel(true); };
+    return;
+  }
+  if (sel.length > 1) {
+    const f = sel.every(u => u.focus === sel[0].focus) ? sel[0].focus : null;
+    const tints = [...new Set(sel.map(u => u.packs[0] || ""))];
+    el.innerHTML = `<h3>${sel.length} selected</h3><div class="role">Crew</div><ul>${sel.map(u => `<li>${esc(dispName(u))}${packSquares(u)}</li>`).join("")}</ul>${focusHTML(f, tints.length === 1 && tints[0] ? PACK_COLOR[tints[0]] : null)}`;
+    wireFocus(sel);
+    return;
+  }
+  const u = sel[0];
+  const canPromote = cc.core === true && !captain() && !u.captain;
+  const pct = v => `${Math.round(v * 100)}%`;
+  const limits = [!canHaul(u) && "haul", !canClear(u) && "clear rubble", has(u, "blue") && "mine"].filter(Boolean);
+  const slotRow = Array.from({ length: u.slots }, (_, n) => {
+    const c = u.packs[n];
+    return c ? `<button class="slot full" data-un="${c}" title="Remove ${ITEM_NAME[c]}"><i class="pk" style="background:${PACK_COLOR[c]}"></i>${PACK_NAME[c].split(" ")[0]} ×</button>` : `<span class="slot">Empty slot</span>`;
+  }).join("");
+  const picker = upgradeOpen === u.id ? `<div class="picker">${PACKS.map(c => `<button class="ghost" data-pk="${c}" ${cc.packs[c] > 0 ? "" : "disabled"} title="${PACK_INFO[c]}"><i class="pk" style="background:${PACK_COLOR[c]}"></i>${PACK_NAME[c].split(" ")[0]} (${cc.packs[c]})</button>`).join("")}</div><p class="focus-info">${PACKS.some(c => cc.packs[c] > 0) ? "Pick a pack stored in the command center. The drone walks there to fit it." : "No packs stored yet. Print them at the drone printer."}</p>` : "";
+  el.innerHTML = `<h3>${esc(dispName(u))}${packSquares(u)}</h3><div class="role">${u.captain ? "Captain" : "Drone"}</div>
+    <table><tr><td>Power use</td><td>${u.captain ? "0" : "1"}</td></tr><tr><td>Can mine</td><td>${has(u, "blue") ? "Nothing (clearing pack)" : u.captain ? "Soft and hard rock" : "Soft rock"}</td></tr>
+    <tr><td>Mining speed</td><td>${pct(workOf(u))}</td></tr><tr><td>Clearing speed</td><td>${pct(clearOf(u) / CLEAR_MULT)}</td></tr><tr><td>Move speed</td><td>${pct(baseOf(u) * (1 + .5 * has(u, "green")))}</td></tr>
+    ${limits.length ? `<tr><td>Can’t</td><td>${limits.join(", ")}</td></tr>` : ""}<tr><td>Control</td><td>${u.auto ? "Auto-work" : "Manual"}</td></tr><tr><td>Doing</td><td id="selStatus">${statusOf(u)}</td></tr></table>
+    <div class="slots">${slotRow}${u.packs.length < u.slots ? `<button class="ghost" id="upBtn">${upgradeOpen === u.id ? "Close" : "Upgrade"}</button>` : ""}</div>${picker}
+    ${focusHTML(u.focus, u.packs.length ? PACK_COLOR[u.packs[0]] : null)}
+    <div class="actions">${canPromote ? `<button id="promoBtn">Promote to Captain</button>` : ""}<button class="ghost" id="autoBtn" aria-pressed="${u.auto}">Auto-work: ${u.auto ? "on" : "off"}</button><button class="ghost" id="renBtn">Rename</button></div>`;
+  $("autoBtn").onclick = () => { u.auto = !u.auto; if (!u.auto && u.task && u.task.t !== "deliver") { u.task = null; u.path = []; } renderSel(true); };
+  if ($("promoBtn")) $("promoBtn").onclick = () => promote(u);
+  if ($("upBtn")) $("upBtn").onclick = () => { upgradeOpen = upgradeOpen === u.id ? null : u.id; renderSel(true); };
+  for (const btn of el.querySelectorAll("[data-pk]")) btn.onclick = () => { upgradeOpen = null; u.holdT = 0; setTask(u, { t: "install", color: btn.dataset.pk }, ringTiles(cc)); renderSel(true); };
+  for (const btn of el.querySelectorAll("[data-un]")) btn.onclick = () => { u.holdT = 0; setTask(u, { t: "uninstall", color: btn.dataset.un }, ringTiles(cc)); renderSel(true); };
+  $("renBtn").onclick = () => openName(u, false);
+  wireFocus([u]);
+}
+const FOCUS_INFO = { all: "Does everything: hauls what’s dropped, clears rubble, then mines the next queued wall.", mine: "Only mines queued walls, walking over rubble.", clear: "Only clears queued rubble and wreckage.", collect: "Only picks up and hauls loose items." };
+function focusHTML(f, tint) {
+  const st = tint ? ` style="background:${tint};color:#fff"` : "", bd = tint ? ` style="border-color:${tint}"` : "";
+  return `<div class="focus" role="group" aria-label="Work mode"${bd}>${["all", "mine", "clear", "collect"].map(k => `<button data-focus="${k}" class="${f === k ? "on" : ""}" aria-pressed="${f === k}"${f === k ? st : ""}>${k === "all" ? "All-round" : cap1(k)}</button>`).join("")}</div><p class="focus-info">${f ? FOCUS_INFO[f] : "Mixed modes. Pick one to set them all."}</p>`;
+}
+function wireFocus(list) {
+  const covers = { all: ["mine", "clear", "fetch"], mine: ["mine"], clear: ["clear"], collect: ["fetch"] };
+  for (const btn of $("sel").querySelectorAll("[data-focus]")) btn.onclick = () => {
+    for (const u of list) {
+      u.focus = btn.dataset.focus; u.thinkT = 0;
+      if (u.task && ["mine", "clear", "fetch"].includes(u.task.t) && !covers[u.focus].includes(u.task.t)) { u.task = null; u.path = []; }
+    }
+    renderSel(true);
+  };
+}
+function statusOf(u) {
+  const k = u.task;
+  const c = u.carry ? `Carrying ${ITEM_NAME[u.carry]}` : null;
+  if (!k) return c || (u.holdT > 0 ? "Holding position" : u.blocked ? "Blocked: no job it can do" : u.auto ? "Idle" : "Idle (auto-work off)");
+  return { move: "Moving", goto: "Moving", mine: "Mining", clear: "Clearing rubble", fetch: "Fetching", deliver: c || "Delivering", repair: "Repairing", install: `Fitting a ${ITEM_NAME[k.color]}`, uninstall: `Removing a ${ITEM_NAME[k.color]}` }[k.t];
+}
+const cap1 = s => s[0].toUpperCase() + s.slice(1);
+const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+let toastT = 0;
+function toast(m) { const t = $("toast"); t.textContent = m; t.classList.add("show"); toastT = 2.6; }
+
+// ---------- effects ----------
+function burst(x, y, c, n) { for (let k = 0; k < n; k++) { const a = Math.random() * 6.28, s = 20 + Math.random() * 90; particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: .5 + Math.random() * .5, max: 1, c, s: 1.5 + Math.random() * 2 }); } }
+function spark(u, i, c) { const [cx, cy] = center(i); const mx = (u.x + cx) / 2, my = (u.y + cy) / 2; const a = Math.random() * 6.28; particles.push({ x: mx, y: my, vx: Math.cos(a) * 60, vy: Math.sin(a) * 60, life: .35, max: .35, c, s: 1.6 }); }
+let pings = [];
+function ping(x, y) { pings.push({ x, y, t: .5 }); }
+
+// ---------- rendering ----------
+const cv = $("c"), ctx = cv.getContext("2d");
+let vw = 0, vh = 0, dpr = 1;
+function resize() { dpr = Math.min(2, window.devicePixelRatio || 1); vw = innerWidth; vh = innerHeight; cv.width = vw * dpr; cv.height = vh * dpr; }
+addEventListener("resize", resize); resize();
+const FONT = '"Chakra Petch", system-ui, sans-serif';
+let now = 0;
+
+const WALL = {
+  [DIRT]: { base: "#5e452f", top: "#7c5d41", speck: "#4a3524" },
+  [ROCK]: { base: "#3c4352", top: "#535b6c", speck: "#2b303b" },
+  [BED]:  { base: "#121419", top: "#191c23", speck: "#0c0d11" },
+  [SEAM]: { base: "#5e452f", top: "#7c5d41", speck: "#4a3524" },
+  [ANOM]: { base: "#2f2944", top: "#433a62", speck: "#221d33" },
+  [OREV]: { base: "#5e452f", top: "#7c5d41", speck: "#4a3524" },
+};
+function rr(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+function glow(x, y, r, c, a) { const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, c); g.addColorStop(1, "rgba(0,0,0,0)"); ctx.globalAlpha = a; ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2); ctx.globalAlpha = 1; }
+
+function drawTile(x, y) {
+  const i = idx(x, y), px = x * TS, py = y * TS;
+  if (!revealed[i]) { ctx.fillStyle = "#06070a"; ctx.fillRect(px, py, TS, TS); return; }
+  const t = tType[i];
+  if (t === FLOOR) {
+    ctx.fillStyle = ((x * 7 + y * 3) % 5 === 0) ? "#22262f" : "#20242d";
+    ctx.fillRect(px, py, TS, TS);
+    ctx.fillStyle = "rgba(255,255,255,.035)";
+    for (let k = 0; k < 3; k++) ctx.fillRect(px + rnd(i, k) * 28, py + rnd(i, k + 9) * 28, 2, 2);
+    if (pile[i]) drawPile(px, py, i);
+    return;
+  }
+  const p = WALL[t];
+  ctx.fillStyle = p.base; ctx.fillRect(px, py, TS, TS);
+  if (t === BED) {
+    ctx.strokeStyle = p.top; ctx.lineWidth = 1;
+    ctx.beginPath(); for (let k = -TS; k < TS; k += 7) { ctx.moveTo(px + k, py + TS); ctx.lineTo(px + k + TS, py); } ctx.save(); ctx.rect(px, py, TS, TS); ctx.clip(); ctx.stroke(); ctx.restore();
+    return;
+  }
+  ctx.fillStyle = p.top; rr(px + 2, py + 2, TS - 4, TS - 7, 4); ctx.fill();
+  ctx.fillStyle = p.speck;
+  for (let k = 0; k < (t === ROCK ? 6 : 4); k++) ctx.fillRect(px + 4 + rnd(i, k) * 22, py + 4 + rnd(i, k + 5) * 18, t === ROCK ? 3 : 2, 2);
+  if (t === ROCK) { ctx.fillStyle = "rgba(160,190,225,.35)"; ctx.fillRect(px + 6 + rnd(i, 40) * 18, py + 6 + rnd(i, 41) * 14, 2, 2); }
+  // lit edges facing open floor
+  ctx.fillStyle = "rgba(255,235,200,.09)";
+  if (y > 0 && tType[i - W] === FLOOR && revealed[i - W]) ctx.fillRect(px, py, TS, 2);
+  if (x > 0 && tType[i - 1] === FLOOR && revealed[i - 1]) ctx.fillRect(px, py, 2, TS);
+  if (x < W - 1 && tType[i + 1] === FLOOR && revealed[i + 1]) ctx.fillRect(px + TS - 2, py, 2, TS);
+  if (t === OREV) {
+    for (let k = 0; k < 5; k++) {
+      const cx = px + 6 + rnd(i, k + 30) * 18, cy = py + 6 + rnd(i, k + 33) * 15, s = 2.5 + rnd(i, k + 36) * 2.5;
+      ctx.fillStyle = "#2c3340"; ctx.fillRect(cx - 1, cy - 1, s + 2, s + 2);
+      ctx.fillStyle = k % 2 ? "#8fb0d8" : "#b9d0ec"; ctx.fillRect(cx, cy, s, s);
+    }
+  }
+  if (t === SEAM) {
+    const pul = .7 + .3 * Math.sin(now * 2.4 + i);
+    glow(px + 16, py + 15, 20, "rgba(255,181,71,.7)", .55 * pul);
+    for (let k = 0; k < 3; k++) {
+      const cx = px + 8 + rnd(i, k + 20) * 16, cy = py + 8 + rnd(i, k + 23) * 14, s = 4 + rnd(i, k + 26) * 3;
+      ctx.fillStyle = k ? "#ffb547" : "#ffe0a3";
+      ctx.beginPath(); ctx.moveTo(cx, cy - s); ctx.lineTo(cx + s * .6, cy); ctx.lineTo(cx, cy + s); ctx.lineTo(cx - s * .6, cy); ctx.closePath(); ctx.fill();
+    }
+  }
+  if (t === ANOM) {
+    const pul = .5 + .5 * Math.sin(now * 3.1);
+    glow(px + 16, py + 15, 26, "rgba(180,140,255,.85)", .45 + .4 * pul);
+    ctx.strokeStyle = `rgba(214,190,255,${.5 + .5 * pul})`; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(px + 16, py + 14, 7 + pul * 3, 0, 6.28); ctx.stroke();
+    ctx.fillStyle = "#e9dcff";
+    for (let k = 0; k < 3; k++) if (rnd(Math.floor(now * 8), k + i) > .45) ctx.fillRect(px + 6 + k * 7, py + 22, 5, 2);
+  }
+  const max = HARD[t];
+  if (tHp[i] < max) {
+    const f = 1 - tHp[i] / max;
+    ctx.strokeStyle = "rgba(0,0,0,.55)"; ctx.lineWidth = 1.5; ctx.beginPath();
+    for (let k = 0; k < Math.ceil(f * 5); k++) { const sx = px + 4 + rnd(i, k + 60) * 24, sy = py + 4 + rnd(i, k + 70) * 20; ctx.moveTo(sx, sy); ctx.lineTo(sx + (rnd(i, k + 80) - .5) * 14, sy + (rnd(i, k + 90) - .5) * 14); }
+    ctx.stroke();
+    bar(px + 3, py - 6, TS - 6, f, "#ffb547");
+  }
+}
+function drawPile(px, py, i) {
+  if (pile[i] === WRECK) {
+    for (let k = 0; k < 5; k++) {
+      const cx = px + 6 + rnd(i, k + 100) * 20, cy = py + 6 + rnd(i, k + 110) * 20, a = rnd(i, k + 120) * 3.14, s = 4 + rnd(i, k + 130) * 5;
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(a);
+      ctx.fillStyle = k % 2 ? "#6d7686" : "#4b525f"; ctx.fillRect(-s, -s * .5, s * 2, s);
+      ctx.fillStyle = "rgba(255,255,255,.12)"; ctx.fillRect(-s, -s * .5, s * 2, 1);
+      ctx.restore();
+    }
+  } else {
+    // loose rubble: a low mound of broken rock, walkable but slow
+    ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.beginPath(); ctx.ellipse(px + 16, py + 19, 13, 8, 0, 0, 6.28); ctx.fill();
+    for (let k = 0; k < 9; k++) {
+      const cx = px + 5 + rnd(i, k + 140) * 22, cy = py + 7 + rnd(i, k + 150) * 18, s = 2.5 + rnd(i, k + 160) * 3.5;
+      ctx.fillStyle = k % 3 === 0 ? "#6b5a45" : k % 3 === 1 ? "#58493a" : "#7d6a52";
+      ctx.beginPath(); ctx.moveTo(cx - s, cy + s * .6); ctx.lineTo(cx - s * .3, cy - s * .8); ctx.lineTo(cx + s, cy - s * .2); ctx.lineTo(cx + s * .6, cy + s * .7); ctx.closePath(); ctx.fill();
+    }
+  }
+  if (pHp[i] < pMax[i]) bar(px + 3, py - 6, TS - 6, 1 - pHp[i] / pMax[i], "#b07a45");
+}
+function drawJob(i) {
+  const [cx, cy] = center(i), x = cx - 16, y = cy - 16, k = 7;
+  const shovel = !isMineable(tType[i]);
+  const ready = !(tType[i] === ROCK && !captain());
+  const col = !ready ? "rgba(200,205,215,.55)" : shovel ? "#b07a45" : "#ffb547";
+  ctx.strokeStyle = col; ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(x + 2, y + 2 + k); ctx.lineTo(x + 2, y + 2); ctx.lineTo(x + 2 + k, y + 2);
+  ctx.moveTo(x + 30 - k, y + 2); ctx.lineTo(x + 30, y + 2); ctx.lineTo(x + 30, y + 2 + k);
+  ctx.moveTo(x + 30, y + 30 - k); ctx.lineTo(x + 30, y + 30); ctx.lineTo(x + 30 - k, y + 30);
+  ctx.moveTo(x + 2 + k, y + 30); ctx.lineTo(x + 2, y + 30); ctx.lineTo(x + 2, y + 30 - k);
+  ctx.stroke();
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(shovel ? .6 : -.6);
+  ctx.fillStyle = "rgba(10,12,18,.55)"; ctx.beginPath(); ctx.arc(0, 0, 9, 0, 6.28); ctx.fill();
+  ctx.fillStyle = col;
+  if (shovel) {
+    ctx.fillRect(-1, -8, 2, 9);                       // handle
+    ctx.fillRect(-3, -9, 6, 2);                       // grip
+    ctx.beginPath(); ctx.moveTo(-4, 1); ctx.lineTo(4, 1); ctx.lineTo(3, 6); ctx.quadraticCurveTo(0, 9, -3, 6); ctx.closePath(); ctx.fill();  // blade
+  } else {
+    ctx.fillRect(-1, -6, 2, 12);
+    ctx.beginPath(); ctx.moveTo(-7, -5); ctx.quadraticCurveTo(0, -10, 7, -5); ctx.lineTo(6, -3); ctx.quadraticCurveTo(0, -7, -6, -3); ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+}
+function bar(x, y, w, f, c) { ctx.fillStyle = "rgba(0,0,0,.6)"; ctx.fillRect(x - 1, y - 1, w + 2, 6); ctx.fillStyle = c; ctx.fillRect(x, y, w * Math.min(1, f), 4); }
+
+function drawBuilding(b) {
+  if (!discovered(b)) return;
+  const px = b.x * TS, py = b.y * TS, w = b.w * TS, h = b.h * TS;
+  ctx.fillStyle = "rgba(0,0,0,.35)"; rr(px + 3, py + 6, w - 2, h - 2, 8); ctx.fill();
+  const hull = b.kind === "terminal" && !b.active ? "#4a505c" : "#7d8799";
+  ctx.fillStyle = "#4b5261"; rr(px + 2, py + 2, w - 4, h - 4, 8); ctx.fill();
+  ctx.fillStyle = hull; rr(px + 4, py + 3, w - 8, h - 9, 7); ctx.fill();
+  ctx.strokeStyle = "rgba(0,0,0,.25)"; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(px + 8, py + 20); ctx.lineTo(px + w - 8, py + 20); ctx.stroke();
+  const cx = px + w / 2, cy = py + h / 2;
+  if (b.kind === "cc") {
+    ctx.fillStyle = "#16232b"; ctx.beginPath(); for (let k = 0; k < 6; k++) { const a = k / 6 * 6.28 + .52; ctx.lineTo(cx + Math.cos(a) * 17, cy + 2 + Math.sin(a) * 17); } ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "#5fe0d0"; ctx.lineWidth = 1.5; ctx.globalAlpha = .6 + .4 * Math.sin(now * 2); ctx.stroke(); ctx.globalAlpha = 1;
+    const core = b.core === true;
+    if (core) glow(cx, cy + 2, 26, "rgba(255,225,160,.9)", .7);
+    ctx.fillStyle = core ? "#fff1d0" : b.core === "used" ? "#f2c14e" : "#2e3a44"; ctx.beginPath(); ctx.arc(cx, cy + 2, 6, 0, 6.28); ctx.fill();
+    ctx.fillStyle = "#5fe0d0"; ctx.fillRect(px + 9, py + 8, 4, 4);
+  } else if (b.kind === "printer") {
+    ctx.fillStyle = "#2a303b"; ctx.fillRect(px + 10, py + 22, w - 20, h - 32);
+    ctx.fillStyle = "#5b6474"; ctx.fillRect(px + 8, py + 8, 5, h - 18); ctx.fillRect(px + w - 13, py + 8, 5, h - 18); ctx.fillRect(px + 8, py + 8, w - 16, 5);
+    const busy = !!b.cur, nx = cx + (busy ? Math.sin(now * 9) * 14 : 0);
+    ctx.fillStyle = busy ? "#5fe0d0" : "#9aa4b5"; ctx.fillRect(nx - 4, py + 12, 8, 9);
+    if (busy) { glow(nx, py + 24, 12, "rgba(95,224,208,.9)", .7); const f = 1 - b.timer / b.total; ctx.fillStyle = b.cur === "drone" ? "#e9ecef" : PACK_COLOR[b.cur]; ctx.globalAlpha = .4 + f * .6; ctx.beginPath(); ctx.arc(cx, py + h - 18, 3 + f * 6, 0, 6.28); ctx.fill(); ctx.globalAlpha = 1; bar(px + 6, py - 8, w - 12, f, "#5fe0d0"); }
+  } else if (b.kind === "plant") {
+    ctx.fillStyle = "#1d2230"; rr(px + 12, py + 9, w - 24, h - 22, 6); ctx.fill();
+    const n = Math.min(b.crystals, 8);
+    for (let k = 0; k < 8; k++) {
+      const bx = px + 16 + (k % 4) * 8, by = py + 13 + Math.floor(k / 4) * 18;
+      ctx.fillStyle = k < n ? "#ffb547" : "#2b3142"; ctx.fillRect(bx, by, 5, 14);
+      if (k < n) glow(bx + 2, by + 7, 9, "rgba(255,181,71,.8)", .35 + .15 * Math.sin(now * 3 + k));
+    }
+  } else if (b.kind === "terminal") {
+    ctx.fillStyle = b.active ? "#123a3a" : "#14171d"; ctx.fillRect(px + 10, py + 9, w - 20, 24);
+    if (b.active) { glow(cx, py + 21, 34, "rgba(95,224,208,.9)", .6); ctx.fillStyle = "#5fe0d0"; for (let k = 0; k < 4; k++) ctx.fillRect(px + 14, py + 13 + k * 5, 10 + rnd(k, Math.floor(now * 3)) * 24, 2); }
+    else {
+      ctx.strokeStyle = "#3a404d"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(px + 14, py + 12); ctx.lineTo(px + 30, py + 24); ctx.lineTo(px + 44, py + 15); ctx.stroke();
+      if (Math.sin(now * 5) > 0) { ctx.fillStyle = "#e05a4a"; ctx.fillRect(px + w - 16, py + 12, 3, 3); }
+      const bw = w - 24, bx = px + 12;
+      ctx.fillStyle = "#2b3142"; ctx.fillRect(bx, py + 38, bw, 4); ctx.fillRect(bx, py + 45, bw, 4);
+      ctx.fillStyle = "#8fb0d8"; ctx.fillRect(bx, py + 38, bw * Math.min(1, b.ore / NEED_ORE), 4);
+      ctx.fillStyle = "#ffb547"; ctx.fillRect(bx, py + 45, bw * Math.min(1, b.crystal / NEED_CRY), 4);
+      if (b.repair > 0) bar(px + 6, py - 8, w - 12, b.repair / REPAIR_NEED, "#5fe0d0");
+    }
+  }
+  if (selBuilding === b) { ctx.strokeStyle = "#5fe0d0"; ctx.lineWidth = 2; ctx.setLineDash([6, 4]); ctx.lineDashOffset = -now * 12; rr(px, py, w, h, 9); ctx.stroke(); ctx.setLineDash([]); }
+  const hv = hoverTile();
+  if (selBuilding === b || (hv && bldAt[idx(hv[0], hv[1])] === b.id)) tag(cap1(label(b)), cx, py + h + 12);
+}
+function tag(text, x, y, packs) {
+  ctx.font = `600 11px ${FONT}`;
+  const tw = ctx.measureText(text).width, pw = packs && packs.length ? packs.length * 10 + 3 : 0, w = tw + pw + 10;
+  ctx.fillStyle = "rgba(10,12,18,.8)"; rr(x - w / 2, y - 9, w, 16, 3); ctx.fill();
+  ctx.fillStyle = "#e7ebf2"; ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.fillText(text, x - w / 2 + 5, y);
+  if (pw) packs.forEach((c, k) => { const px = x - w / 2 + 5 + tw + 4 + k * 10; ctx.fillStyle = PACK_COLOR[c]; ctx.fillRect(px, y - 4, 8, 8); ctx.strokeStyle = "rgba(255,255,255,.7)"; ctx.lineWidth = 1; ctx.strokeRect(px + .5, y - 3.5, 7, 7); });
+  ctx.textAlign = "center";
+}
+function drawItem(type, x, y, s = 1) {
+  if (type === "crystal") {
+    glow(x, y, 14 * s, "rgba(255,181,71,.8)", .5);
+    ctx.fillStyle = "#ffb547"; ctx.beginPath(); ctx.moveTo(x, y - 7 * s); ctx.lineTo(x + 4.5 * s, y); ctx.lineTo(x, y + 7 * s); ctx.lineTo(x - 4.5 * s, y); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#ffe8bd"; ctx.beginPath(); ctx.moveTo(x, y - 7 * s); ctx.lineTo(x + 2 * s, y - 1 * s); ctx.lineTo(x, y + 1 * s); ctx.closePath(); ctx.fill();
+  } else if (type === "ore") {
+    ctx.fillStyle = "#2c3340"; ctx.beginPath(); ctx.moveTo(x - 6 * s, y - 1 * s); ctx.lineTo(x - 2 * s, y - 6 * s); ctx.lineTo(x + 5 * s, y - 4 * s); ctx.lineTo(x + 6 * s, y + 3 * s); ctx.lineTo(x, y + 6 * s); ctx.lineTo(x - 5 * s, y + 4 * s); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#8fb0d8"; ctx.fillRect(x - 3 * s, y - 3 * s, 3 * s, 3 * s); ctx.fillRect(x + 1 * s, y + 1 * s, 2 * s, 2 * s);
+  } else if (PACK_COLOR[type]) {
+    const h = 5.5 * s;
+    ctx.fillStyle = "rgba(0,0,0,.4)"; ctx.fillRect(x - h + 1, y - h + 2, h * 2, h * 2);
+    ctx.fillStyle = PACK_COLOR[type]; ctx.fillRect(x - h, y - h, h * 2, h * 2);
+    ctx.strokeStyle = "rgba(255,255,255,.75)"; ctx.lineWidth = 1.2; ctx.strokeRect(x - h + .6, y - h + .6, h * 2 - 1.2, h * 2 - 1.2);
+    ctx.fillStyle = "rgba(255,255,255,.35)"; ctx.fillRect(x - h + 2, y - h + 2, h * 2 - 4, 2);
+  } else if (type === "core") {
+    const p = .5 + .5 * Math.sin(now * 4);
+    glow(x, y, 22 * s, "rgba(255,225,160,.95)", .55 + .3 * p);
+    ctx.strokeStyle = "#f2c14e"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, (8 + p * 2) * s, 0, 6.28); ctx.stroke();
+    ctx.fillStyle = "#fff1d0"; ctx.beginPath(); ctx.arc(x, y, 5 * s, 0, 6.28); ctx.fill();
+  }
+}
+function drawUnit(u) {
+  const cap = u.captain, r = cap ? 11.5 : 9;
+  let sc = 1;
+  if (u.promoT > 0) { const t = 1 - u.promoT / 1.6; sc = 1 + Math.sin(t * Math.PI) * .5; glow(u.x, u.y, 50 * (1 - t) + 10, "rgba(242,193,78,.95)", u.promoT / 1.6); }
+  const bob = u.path.length ? Math.sin(u.bob * 2) * .8 : 0;
+  ctx.save(); ctx.translate(u.x, u.y + bob); ctx.scale(sc, sc);
+  ctx.fillStyle = "rgba(0,0,0,.4)"; ctx.beginPath(); ctx.ellipse(1, 6, r + 1, r * .55, 0, 0, 6.28); ctx.fill();
+  if (u.sel) { ctx.strokeStyle = "#5fe0d0"; ctx.lineWidth = 2; ctx.setLineDash([5, 4]); ctx.lineDashOffset = -now * 14; ctx.beginPath(); ctx.arc(0, 0, r + 5, 0, 6.28); ctx.stroke(); ctx.setLineDash([]); }
+  ctx.save(); ctx.rotate(u.dir);
+  ctx.fillStyle = "#1c2028"; ctx.fillRect(-r + 1, -r - 2, r * 2 - 2, 4); ctx.fillRect(-r + 1, r - 2, r * 2 - 2, 4);
+  ctx.restore();
+  ctx.fillStyle = cap ? "#2c3e66" : "#dfe4ea"; ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.28); ctx.fill();
+  ctx.fillStyle = cap ? "#3b5285" : "#f7f9fb"; ctx.beginPath(); ctx.arc(-2, -2.5, r * .6, 0, 6.28); ctx.fill();
+  if (cap) {
+    ctx.strokeStyle = "#f2c14e"; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.28); ctx.stroke();
+    const ax = -Math.cos(u.dir) * 8, ay = -Math.sin(u.dir) * 8;
+    ctx.strokeStyle = "#c9cfd8"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(ax * .6, ay * .6); ctx.lineTo(ax * 1.2, ay * 1.2 - 8); ctx.stroke();
+    ctx.fillStyle = Math.sin(now * 4) > 0 ? "#ffb547" : "#7a5418"; ctx.beginPath(); ctx.arc(ax * 1.2, ay * 1.2 - 8, 2.2, 0, 6.28); ctx.fill();
+  }
+  u.packs.forEach((c, k) => { ctx.fillStyle = PACK_COLOR[c]; ctx.fillRect(-r * .55 + k * 5 - (u.packs.length - 1) * 2.5, r * .25, 4.5, 4.5); });
+  const vx = Math.cos(u.dir), vy = Math.sin(u.dir);
+  ctx.fillStyle = "#1a2330"; ctx.beginPath(); ctx.ellipse(vx * r * .45, vy * r * .45, r * .55, r * .4, u.dir, 0, 6.28); ctx.fill();
+  const eye = cap ? "#ffb547" : "#5fe0d0";
+  glow(vx * r * .6, vy * r * .6, 6, cap ? "rgba(255,181,71,.9)" : "rgba(95,224,208,.9)", .8);
+  ctx.fillStyle = eye; ctx.beginPath(); ctx.arc(vx * r * .6, vy * r * .6, 2.2, 0, 6.28); ctx.fill();
+  ctx.restore();
+  if (u.carry) drawItem(u.carry, u.x, u.y - r - 9 + bob, .8);
+  if (u.blocked && !u.task && !u.path.length) {
+    const wy = u.y - r - 12 + Math.sin(now * 4) * 1.5;
+    ctx.fillStyle = "#f5c518"; ctx.strokeStyle = "#1b1b1b"; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(u.x, wy - 8); ctx.lineTo(u.x + 8, wy + 6); ctx.lineTo(u.x - 8, wy + 6); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#1b1b1b"; ctx.fillRect(u.x - 1, wy - 3, 2, 5); ctx.fillRect(u.x - 1, wy + 3, 2, 2);
+  }
+  const [mx, my] = screenToWorld(hover.x, hover.y);
+  if (u.sel || Math.hypot(mx - u.x, my - u.y) < 14) tag(dispName(u), u.x, u.y + r + 12, u.packs);
+}
+function drawMarker() {
+  if (freePlay || step >= STEPS.length || mode !== "play") return;
+  const p = STEPS[step].target();
+  if (!p) return;
+  const [x, y] = p, pul = (now * 1.2) % 1;
+  ctx.strokeStyle = `rgba(255,181,71,${1 - pul})`; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.arc(x, y, 14 + pul * 18, 0, 6.28); ctx.stroke();
+  ctx.fillStyle = "#ffb547"; ctx.beginPath(); const by = y - 26 - Math.abs(Math.sin(now * 3)) * 5;
+  ctx.moveTo(x, by + 9); ctx.lineTo(x - 6, by); ctx.lineTo(x + 6, by); ctx.closePath(); ctx.fill();
+}
+function drawOffscreenArrow() {
+  if (freePlay || step >= STEPS.length || mode !== "play") return;
+  const p = STEPS[step].target(); if (!p) return;
+  const [sx, sy] = worldToScreen(p[0], p[1]), m = 40;
+  if (sx > m && sy > m && sx < vw - m && sy < vh - m) return;
+  const cx = vw / 2, cy = vh / 2, a = Math.atan2(sy - cy, sx - cx);
+  const k = Math.min((vw / 2 - m) / Math.abs(Math.cos(a) || 1e-6), (vh / 2 - m) / Math.abs(Math.sin(a) || 1e-6));
+  const ax = cx + Math.cos(a) * k, ay = cy + Math.sin(a) * k;
+  ctx.save(); ctx.translate(ax, ay); ctx.rotate(a);
+  ctx.fillStyle = "#ffb547"; ctx.beginPath(); ctx.moveTo(14, 0); ctx.lineTo(-8, -10); ctx.lineTo(-3, 0); ctx.lineTo(-8, 10); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+function screenToWorld(sx, sy) { return [(sx - vw / 2) / cam.z + cam.x, (sy - vh / 2) / cam.z + cam.y]; }
+function worldToScreen(wx, wy) { return [(wx - cam.x) * cam.z + vw / 2, (wy - cam.y) * cam.z + vh / 2]; }
+function hoverTile() { if (!hover.inside) return null; const [wx, wy] = screenToWorld(hover.x, hover.y); const tx = Math.floor(wx / TS), ty = Math.floor(wy / TS); return inb(tx, ty) ? [tx, ty] : null; }
+
+function draw() {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = "#06070a"; ctx.fillRect(0, 0, vw, vh);
+  if (!tType) return;
+  ctx.save(); ctx.translate(vw / 2, vh / 2); ctx.scale(cam.z, cam.z); ctx.translate(-cam.x, -cam.y);
+  const [x0, y0] = screenToWorld(0, 0), [x1, y1] = screenToWorld(vw, vh);
+  const tx0 = Math.max(0, Math.floor(x0 / TS) - 1), ty0 = Math.max(0, Math.floor(y0 / TS) - 1), tx1 = Math.min(W - 1, Math.ceil(x1 / TS)), ty1 = Math.min(H - 1, Math.ceil(y1 / TS));
+  for (let y = ty0; y <= ty1; y++) for (let x = tx0; x <= tx1; x++) drawTile(x, y);
+  for (const j of jobs.keys()) if (revealed[j]) drawJob(j);
+  const hv = hoverTile();
+  if (hv && revealed[idx(hv[0], hv[1])] && units.some(u => u.sel)) { ctx.strokeStyle = "rgba(255,255,255,.25)"; ctx.lineWidth = 1; ctx.strokeRect(hv[0] * TS + .5, hv[1] * TS + .5, TS - 1, TS - 1); }
+  for (const b of buildings) drawBuilding(b);
+  for (const it of items) drawItem(it.type, it.x, it.y);
+  for (const u of units) if (u.sel && u.path.length) { ctx.strokeStyle = "rgba(95,224,208,.25)"; ctx.lineWidth = 1.5; ctx.setLineDash([3, 5]); ctx.beginPath(); ctx.moveTo(u.x, u.y); for (const j of u.path) ctx.lineTo(...center(j)); ctx.stroke(); ctx.setLineDash([]); }
+  for (const u of units) drawUnit(u);
+  for (const p of particles) { ctx.globalAlpha = Math.max(0, p.life / p.max); ctx.fillStyle = p.c; ctx.fillRect(p.x - p.s / 2, p.y - p.s / 2, p.s, p.s); }
+  ctx.globalAlpha = 1;
+  for (const p of pings) { ctx.strokeStyle = `rgba(95,224,208,${p.t * 2})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(p.x, p.y, 6 + (1 - p.t * 2) * 12, 0, 6.28); ctx.stroke(); }
+  drawMarker();
+  ctx.restore();
+  drawOffscreenArrow();
+  if (drag && drag.active) { ctx.strokeStyle = "#5fe0d0"; ctx.fillStyle = "rgba(95,224,208,.1)"; ctx.lineWidth = 1; const x = Math.min(drag.sx, hover.x), y = Math.min(drag.sy, hover.y), w = Math.abs(hover.x - drag.sx), h = Math.abs(hover.y - drag.sy); ctx.fillRect(x, y, w, h); ctx.strokeRect(x + .5, y + .5, w, h); }
+}
+
+// ---------- input ----------
+let drag = null, pan = null;
+const keys = new Set();
+const anyOverlay = () => document.querySelector(".overlay.show");
+cv.addEventListener("contextmenu", e => e.preventDefault());
+cv.addEventListener("mousemove", e => { hover.x = e.clientX; hover.y = e.clientY; hover.inside = true; if (drag && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 6) drag.active = true; if (pan) { cam.x -= (e.clientX - pan.x) / cam.z; cam.y -= (e.clientY - pan.y) / cam.z; pan.x = e.clientX; pan.y = e.clientY; } });
+cv.addEventListener("mouseleave", () => { hover.inside = false; });
+cv.addEventListener("mouseenter", e => { hover.x = e.clientX; hover.y = e.clientY; hover.inside = true; });
+cv.addEventListener("mousedown", e => {
+  if (mode !== "play" || anyOverlay()) return;
+  if (e.button === 0) drag = { sx: e.clientX, sy: e.clientY, active: false, shift: e.shiftKey };
+  if (e.button === 1) { pan = { x: e.clientX, y: e.clientY }; e.preventDefault(); }
+  if (e.button === 2 && !paused) { const [wx, wy] = screenToWorld(e.clientX, e.clientY); command(wx, wy, e.shiftKey); renderSel(); }
+});
+addEventListener("mouseup", e => {
+  if (e.button === 1) pan = null;
+  if (e.button !== 0 || !drag) return;
+  const d = drag; drag = null;
+  if (mode !== "play") return;
+  if (d.active) {
+    const [ax, ay] = screenToWorld(Math.min(d.sx, e.clientX), Math.min(d.sy, e.clientY)), [bx, by] = screenToWorld(Math.max(d.sx, e.clientX), Math.max(d.sy, e.clientY));
+    if (!d.shift) units.forEach(u => u.sel = false);
+    units.forEach(u => { if (u.x >= ax && u.x <= bx && u.y >= ay && u.y <= by) u.sel = true; });
+    selBuilding = null; renderSel(true); return;
+  }
+  const [wx, wy] = screenToWorld(e.clientX, e.clientY);
+  let hit = null, bd = 16;
+  for (const u of units) { const dd = Math.hypot(u.x - wx, u.y - wy); if (dd < bd) { bd = dd; hit = u; } }
+  if (hit) {
+    if (d.shift) hit.sel = !hit.sel; else { units.forEach(u => u.sel = false); hit.sel = true; }
+    selBuilding = null;
+  } else {
+    const tx = Math.floor(wx / TS), ty = Math.floor(wy / TS);
+    const bi = inb(tx, ty) ? bldAt[idx(tx, ty)] : -1;
+    if (bi >= 0 && discovered(buildings[bi])) { units.forEach(u => u.sel = false); selBuilding = buildings[bi]; }
+    else if (!d.shift) { units.forEach(u => u.sel = false); selBuilding = null; }
+  }
+  renderSel(true);
+});
+cv.addEventListener("wheel", e => {
+  e.preventDefault();
+  const [wx, wy] = screenToWorld(e.clientX, e.clientY);
+  cam.z = Math.max(.55, Math.min(2.4, cam.z * Math.exp(-e.deltaY * .0015)));
+  const [nx, ny] = screenToWorld(e.clientX, e.clientY); cam.x += wx - nx; cam.y += wy - ny;
+}, { passive: false });
+addEventListener("keydown", e => {
+  if (anyOverlay()) {
+    if ($("nameOv").classList.contains("show") && e.key === "Enter") closeName();
+    if (e.key === "Escape") { if ($("helpOv").classList.contains("show")) show("helpOv", false); if ($("nameOv").classList.contains("show")) closeName(); }
+    return;
+  }
+  if (mode !== "play") return;
+  const k = e.key.toLowerCase();
+  keys.add(k);
+  if (k === "escape") { units.forEach(u => u.sel = false); selBuilding = null; renderSel(true); }
+  if (k === "q") { units.forEach(u => u.sel = true); selBuilding = null; renderSel(true); }
+  if (k === "p") togglePause();
+  if (k === "h") show("helpOv", true);
+  if (["arrowup", "arrowdown", "arrowleft", "arrowright"].includes(k)) e.preventDefault();
+});
+addEventListener("keyup", e => keys.delete(e.key.toLowerCase()));
+addEventListener("blur", () => keys.clear());
+function togglePause() { paused = !paused; $("pauseTag").style.display = paused ? "block" : "none"; $("pauseBtn").textContent = paused ? "Resume" : "Pause"; }
+
+// crew roster in the power box
+const roster = $("power");
+roster.addEventListener("click", e => {
+  const u = rosterUnit(e); if (!u || mode !== "play") return;
+  if (e.shiftKey) u.sel = !u.sel; else { units.forEach(o => o.sel = false); u.sel = true; }
+  selBuilding = null; renderSel(true); renderPower();
+});
+$("crewStat").addEventListener("click", e => {
+  const b = e.target.closest("[data-pick]"); if (!b || mode !== "play") return;
+  const pick = b.dataset.pick === "idle" ? isIdle : u => u.blocked && !u.task && !u.path.length;
+  units.forEach(u => u.sel = pick(u)); selBuilding = null; renderSel(true); renderPower();
+});
+roster.addEventListener("dblclick", e => { const u = rosterUnit(e); if (u) { cam.x = u.x; cam.y = u.y; } });
+roster.addEventListener("mouseover", e => { const u = rosterUnit(e); if (u) { showTip(u); placeTip(e); } });
+roster.addEventListener("mousemove", e => { if (tipUnit) placeTip(e); });
+roster.addEventListener("mouseout", e => { if (!e.relatedTarget || !e.relatedTarget.closest || !e.relatedTarget.closest("[data-uid]")) hideTip(); else { const u = rosterUnit({ target: e.relatedTarget }); if (u) showTip(u); } });
+function placeTip(e) { const t = $("tip"); t.style.left = (e.clientX + 14) + "px"; t.style.top = (e.clientY + 16) + "px"; }
+$("startTut").onclick = () => { show("titleOv", false); init(false); };
+$("startFree").onclick = () => { show("titleOv", false); init(true); };
+$("helpBtn").onclick = () => show("helpOv", true);
+$("helpClose").onclick = () => show("helpOv", false);
+$("pauseBtn").onclick = togglePause;
+$("nameOk").onclick = closeName;
+$("promoOk").onclick = () => show("promoOv", false);
+$("again").onclick = () => { show("winOv", false); show("titleOv", true); mode = "title"; };
+
+// ---------- loop ----------
+let last = performance.now(), hudT = 0;
+function frame(t) {
+  const dt = Math.min(.05, (t - last) / 1000); last = t; now = t / 1000;
+  if (mode === "play" || mode === "won") {
+    const live = !paused && !anyOverlay() && mode === "play";
+    // camera
+    const ps = 520 * dt / cam.z;
+    if (keys.has("w") || keys.has("arrowup")) cam.y -= ps;
+    if (keys.has("s") || keys.has("arrowdown")) cam.y += ps;
+    if (keys.has("a") || keys.has("arrowleft")) cam.x -= ps;
+    if (keys.has("d") || keys.has("arrowright")) cam.x += ps;
+    if (hover.inside && !anyOverlay() && !drag) { const m = 10; if (hover.x < m) cam.x -= ps; if (hover.x > vw - m) cam.x += ps; if (hover.y < m) cam.y -= ps; if (hover.y > vh - m) cam.y += ps; }
+    cam.x = Math.max(0, Math.min(W * TS, cam.x)); cam.y = Math.max(0, Math.min(H * TS, cam.y));
+    if (live) {
+      elapsed += dt;
+      for (const u of units) updateUnit(u, dt);
+      separate(dt);
+      updatePrinter(dt);
+      revealTimer -= dt; if (revealTimer <= 0) { revealTimer = .25; revealAll(); }
+      if (winTimer > 0) { winTimer -= dt; if (winTimer <= 0) win(); }
+      updateObjective(false);
+    }
+    for (const q of particles) { q.x += q.vx * dt; q.y += q.vy * dt; q.vx *= .92; q.vy *= .92; q.life -= dt; }
+    particles = particles.filter(q => q.life > 0);
+    for (const q of pings) q.t -= dt; pings = pings.filter(q => q.t > 0);
+    if (toastT > 0) { toastT -= dt; if (toastT <= 0) $("toast").classList.remove("show"); }
+    hudT -= dt;
+    if (hudT <= 0) {
+      hudT = .15;
+      renderPower(); renderSel(false);
+      $("oreN").textContent = B("cc").ore; $("cryN").textContent = B("plant").crystals;
+      $("timeN").textContent = fmtTime(elapsed);
+    }
+  }
+  draw();
+  requestAnimationFrame(frame);
+}
+const fmtTime = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+function win() {
+  mode = "won";
+  $("winTime").textContent = `Finished in ${fmtTime(elapsed)}.`;
+  show("winOv", true);
+}
+// title-screen backdrop: a slow pan over the cave
+init(true); mode = "title"; units.forEach(u => u.sel = false);
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
