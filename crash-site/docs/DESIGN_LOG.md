@@ -66,7 +66,8 @@ Everything decided so far, grouped by topic. Each entry is the current rule; sup
 - The Captain uses 0 power, mines and moves 25% faster than a drone, and works like any drone (owner).
 - Only the Captain can mine hard rock (owner). Drones mine soft rock and veins.
 - The Captain is just named "Captain" on promotion; renaming him later shows "Newname (Captain)" (owner).
-- New drones get a random name from a list; the player can rename at printing and later (owner liked random names; next update changes the generator, see spec).
+- New drones get a random one-syllable consonant-vowel-consonant name (“Tov”, “Feg”), never one already in the crew, with a short skip list of unfortunate words. The player can rename at printing and later (owner liked random names; CVC pattern owner approved 2026-10-23). The starting drone keeps its hand-picked name “Bolt”.
+- Crew limit: **20 including the Captain** (owner). The printer won’t queue or start a drone past it; its panel shows “Crew: N of 20”.
 
 ## Mining, rubble and drops
 
@@ -141,3 +142,4 @@ Everything decided so far, grouped by topic. Each entry is the current rule; sup
 - Shift + right-click as "mark only" (all marking queues now).
 - Pip-style ore and crystal counters on the terminal building (replaced by two centred bars).
 - Crew list on the level complete card.
+- Drone names drawn in order from a fixed list of 12 (Pip, Rivet, Sprocket…).

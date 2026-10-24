@@ -21,7 +21,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 SRC = ROOT / "crash-site.html"
 TEST = ROOT / "tests" / "_test_build.html"
 
-HOOK = ('window.__g={get units(){return units},get items(){return items},B,command,printDrone,queuePrint,promote,'
+HOOK = ('window.__g={get units(){return units},get items(){return items},B,command,printDrone,queuePrint,promote,addUnit,'
         'setTask,ringTiles,get jobs(){return jobs},get step(){return step},idx,closeName,get mode(){return mode},'
         'discovered,get revealed(){return revealed},get pile(){return pile}};})();')
 
@@ -91,11 +91,16 @@ def main():
         check("anomaly crystals stored", waitfor('g.B("plant").crystals>=4', 90, "anomaly crystals"))
         for _ in range(3): ev("()=>window.__g.printDrone()")
         check("five drones plus the Captain", waitfor("g.units.filter(u=>!u.captain).length>=5", 60, "print to 5")); dismiss()
+        names = val('g.units.map(u=>u.name).filter(n=>n!=="Bolt"&&n!=="Captain")')
+        check("printed drones get unique consonant-vowel-consonant names", len(names) >= 4 and len(set(names)) == len(names) and all(len(n) == 3 and n[0].isupper() and n[1] in "aeiou" and n[2].islower() and n[2] not in "aeiou" for n in names))
         check("terminal discovered", waitfor('g.discovered(g.B("terminal"))', 150, "terminal", marks=[(35, 28), (35, 27)]))
         veins = [(36, 22), (36, 24), (38, 20), (42, 20), (45, 22), (45, 24), (42, 26), (39, 27), (44, 21), (44, 25), (37, 21), (43, 20)]
         check("terminal materials delivered", waitfor('g.B("terminal").ore>=12 && g.B("terminal").crystal>=2', 260, "materials", marks=veins))
         sel("true"); cmd(40, 23)
         check("level won", waitfor('g.mode==="won"', 60, "win"))
+        ev('()=>{const g=window.__g; g.B("plant").crystals=40; g.B("printer").queue.length=0; while(g.units.length<19) g.addUnit("Tst",20,17);}')
+        for _ in range(3): ev('()=>window.__g.queuePrint("drone")')
+        check("printer won't queue past 20 crew including the Captain", val('g.B("printer").queue.filter(k=>k==="drone").length') == 1)
         check("no page errors", not errs)
         if errs: print("\n".join(errs))
         b.close()

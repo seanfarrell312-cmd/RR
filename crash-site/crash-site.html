@@ -317,7 +317,9 @@ const CLEAR_MULT = 2;              // rubble clears at 2x mining speed
 const PRINT_TIME = 3;
 const REPAIR_NEED = 10;
 const NEED_ORE = 12, NEED_CRY = 2;
-const NAMES = ["Pip", "Rivet", "Sprocket", "Nib", "Ferro", "Widget", "Dot", "Cog", "Tink", "Gizmo", "Lug", "Flux"];
+const FLEET_MAX = 20;               // crew limit, Captain included
+const NAME_C1 = "BDFGKLMNPRSTVZ", NAME_V = "aeiou", NAME_C2 = "bdgklmnprstvxz";
+const NAME_SKIP = ["Fuk", "Dik", "Kok", "Tit", "Fag", "Nig", "Kum", "Pis", "Gay", "Sex", "Fat", "Pus", "Dum", "Nob", "Bum", "Gun", "Kil", "Ded"];
 const RUBBLE = 1, WRECK = 2;
 const PACK_COST = 3, PACK_TIME = 5, QUEUE_MAX = 5;
 const PACKS = ["red", "blue", "green"];
@@ -332,7 +334,7 @@ let units, items, buildings, particles, jobs, buried;
 let jobSeq = 0;
 let cam = { x: 0, y: 0, z: 1.3 };
 let mode = "title";
-let paused = false, freePlay = false, elapsed = 0, step = 0, nextId = 1, nameIdx = 0;
+let paused = false, freePlay = false, elapsed = 0, step = 0, nextId = 1;
 let selBuilding = null, hover = { x: 0, y: 0, inside: false };
 let winTimer = -1, revealTimer = 0;
 let pendingName = null;
@@ -349,6 +351,7 @@ const drones = () => units.filter(u => !u.captain);
 const captain = () => units.find(u => u.captain);
 const capacity = () => 1 + B("plant").crystals;
 const used = () => drones().length + (B("printer").cur === "drone" ? 1 : 0);
+const fleetRoom = () => FLEET_MAX - units.length - (B("printer").cur === "drone" ? 1 : 0);
 const has = (u, c) => u.packs.filter(p => p === c).length;
 const canMine = (u, t) => !has(u, "blue") && (t === ROCK ? u.captain : isMineable(t));
 const canClear = u => !has(u, "green");
@@ -379,7 +382,7 @@ function init(free) {
   mkBuilding("plant", 19, 19, { crystals: 0 });
   mkBuilding("terminal", 40, 23, { ore: 0, crystal: 0, repair: 0, active: false });
   units = []; items = []; particles = [];
-  nextId = 1; nameIdx = 0; step = 0; elapsed = 0; winTimer = -1; selBuilding = null; paused = false;
+  nextId = 1; step = 0; elapsed = 0; winTimer = -1; selBuilding = null; paused = false;
   addUnit("Bolt", start[0], start[1]);
   for (let x = 0; x <= 13; x++) for (let y = start[1] - 1; y <= start[1] + 1; y++) if (inb(x, y)) revealed[idx(x, y)] = 1;
   revealAll();
@@ -785,6 +788,7 @@ function nudge(u, dx, dy) {
 function queuePrint(kind) {
   const p = B("printer");
   if (p.queue.length + (p.cur ? 1 : 0) >= QUEUE_MAX) { toast(`The printer queue is full (${QUEUE_MAX} orders).`); return; }
+  if (kind === "drone" && p.queue.filter(k => k === "drone").length >= fleetRoom()) { toast(`The crew is full (${FLEET_MAX}, Captain included).`); return; }
   p.queue.push(kind); renderSel(true);
 }
 const printDrone = () => queuePrint("drone");
@@ -792,7 +796,7 @@ function updatePrinter(dt) {
   const p = B("printer"), cc = B("cc");
   if (!p.cur && p.queue.length) {
     const k = p.queue[0];
-    if (k === "drone" ? used() < capacity() : cc.ore >= PACK_COST) {
+    if (k === "drone" ? used() < capacity() && fleetRoom() > 0 : cc.ore >= PACK_COST) {
       p.queue.shift(); p.cur = k; p.total = p.timer = k === "drone" ? PRINT_TIME : PACK_TIME;
       if (k !== "drone") cc.ore -= PACK_COST;
       renderPower(); renderSel(true);
@@ -803,14 +807,14 @@ function updatePrinter(dt) {
 function printerWait() {
   const p = B("printer");
   if (p.cur || !p.queue.length) return "";
-  return p.queue[0] === "drone" ? "Waiting for a free power cell" : `Waiting for ore (${B("cc").ore} of ${PACK_COST})`;
+  return p.queue[0] === "drone" ? (fleetRoom() > 0 ? "Waiting for a free power cell" : `Crew is full (${FLEET_MAX} of ${FLEET_MAX})`) : `Waiting for ore (${B("cc").ore} of ${PACK_COST})`;
 }
 function finishPrint(k) {
   const p = B("printer"), ring = ringTiles(p);
   const spot = ring.find(j => ((j / W) | 0) === p.y + p.h) ?? ring[0];
   const [x, y] = [spot % W, (spot / W) | 0];
   if (k === "drone") {
-    const u = addUnit(NAMES[nameIdx++ % NAMES.length], x, y);
+    const u = addUnit(newName(), x, y);
     burst(u.x, u.y, "#5fe0d0", 20);
     openName(u, true);
   } else {
@@ -819,6 +823,15 @@ function finishPrint(k) {
     burst(cx, cy, PACK_COLOR[k], 18);
     toast(`${PACK_NAME[k]} printed. A drone will carry it to the command center.`);
   }
+}
+// random consonant-vowel-consonant name, never one the crew already uses
+function newName() {
+  const pick = s => s[Math.floor(Math.random() * s.length)], taken = new Set(units.map(u => u.name.toLowerCase()));
+  for (let n = 0; n < 200; n++) {
+    const v = pick(NAME_C1) + pick(NAME_V) + pick(NAME_C2);
+    if (!taken.has(v.toLowerCase()) && !NAME_SKIP.includes(v)) return v;
+  }
+  return "Drone " + nextId;
 }
 function openName(u, fresh) {
   pendingName = u;
@@ -969,10 +982,10 @@ function renderSel(force) {
     let extra = "";
     if (b.kind === "printer" && (freePlay || p.crystals > 0)) {
       const full = b.queue.length + (b.cur ? 1 : 0) >= QUEUE_MAX;
-      const freeCells = Math.max(0, capacity() - used()), queuedDrones = b.queue.filter(k => k === "drone").length, afford = Math.floor(cc.ore / PACK_COST);
+      const freeCells = Math.max(0, Math.min(capacity() - used(), fleetRoom())), queuedDrones = b.queue.filter(k => k === "drone").length, afford = Math.floor(cc.ore / PACK_COST);
       extra = (b.queue.length ? `<div class="queue">Queue: ${b.queue.map((k, n) => `<button class="qchip" data-dq="${n}" title="Remove from queue">${k === "drone" ? "Drone" : `<i class="pk" style="background:${PACK_COLOR[k]}"></i>`} ×</button>`).join("")}</div>` : "") +
         `<section class="psec"><h4>Drones</h4><p>A new crew member. Each active drone uses 1 power cell. Store crystals in the power plant for more cells.</p>
-          <table><tr><td>Cost</td><td>1 power cell</td></tr><tr><td>Can deploy now</td><td>${freeCells}${queuedDrones ? ` (${queuedDrones} queued)` : ""}</td></tr></table>
+          <table><tr><td>Cost</td><td>1 power cell</td></tr><tr><td>Crew</td><td>${units.length} of ${FLEET_MAX}</td></tr><tr><td>Can deploy now</td><td>${freeCells}${queuedDrones ? ` (${queuedDrones} queued)` : ""}</td></tr></table>
           <div class="actions"><button data-q="drone" ${full ? "disabled" : ""}>Print drone</button></div></section>
         <section class="psec"><h4>Upgrade packs</h4><p>Each pack makes a drone better at one job, with a trade-off. Packs go to the command center, where drones are fitted with them.</p>
           <table><tr><td>Cost</td><td>${PACK_COST} ore each</td></tr><tr><td>Ore available</td><td>${cc.ore} (enough for ${afford})</td></tr></table>
