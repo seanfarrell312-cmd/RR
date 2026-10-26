@@ -48,10 +48,10 @@ Everything decided so far, grouped by topic. Each entry is the current rule; sup
 
 ## Work modes (owner)
 
-- **All-round** (default): hauls loose items, then clears queued rubble, then mines queued walls. Finishes each site.
+- **All-round** (default): hauls loose items and carries ore to construction frames, then clears queued rubble, then mines queued walls. Finishes each site.
 - **Mine**: only mines queued walls, walking over rubble.
 - **Clear**: only clears queued rubble and wreckage.
-- **Collect**: only picks up and hauls loose items.
+- **Collect**: only picks up and hauls loose items, and carries ore to construction frames.
 - Drones never take jobs outside their mode. Changing a drone's mode immediately stops any job outside the new mode (owner, latest).
 - Set per drone, or for a whole selection at once, in the info panel. With a pack fitted, the selected mode button takes the pack's colour.
 
@@ -62,7 +62,7 @@ Everything decided so far, grouped by topic. Each entry is the current rule; sup
 
 ## Power and units
 
-- Power capacity = 1 (command center) + 1 per crystal stored in the power plant. Each active drone uses 1 power cell.
+- Power capacity = 1 (command center) + **2 per crystal** stored in the power plant (owner approved 2026-10-23, so 20 drones don’t need 19 crystal veins). Each active drone uses 1 power cell. The power plant starts level 1 with 1 crystal: 3 cells for the 3 starting drones.
 - The Captain uses 0 power, mines and moves 25% faster than a drone, and works like any drone (owner).
 - Only the Captain can mine hard rock (owner). Drones mine soft rock and veins.
 - The Captain is just named "Captain" on promotion; renaming him later shows "Newname (Captain)" (owner).
@@ -84,12 +84,13 @@ Everything decided so far, grouped by topic. Each entry is the current rule; sup
 - Crystals go to the power plant; ore and packs to the command center; the core to the command center.
 - Once the main terminal is discovered, ore and crystals go to it until its needs are met.
 - A drone left holding an item delivers it on its own.
-- Drones with a mining pack can't haul.
+- Drones with a mining pack can’t haul.
+- **Construction frames** take ore from the command center’s storage: an auto drone walks to the command center, takes 1 ore, and carries it to the frame (same priority as hauling loose items; owner approved). Ore dug up anywhere still goes to the command center first. Right-clicking a frame with drones selected sends them to supply it and keeps them on auto-work. If a frame finishes while a drone is carrying ore to it, the ore goes back to storage.
 
 ## Buildings (current level 1)
 
 - **Command center**: supplies 1 power, stores ore and packs, fits packs to drones, accepts the power core.
-- **Drone printer**: prints drones and upgrade packs from one queue of up to 5 orders, worked in order. A drone order waits for a free power cell; a pack order waits until the command center has 3 ore (cost is taken when printing starts). Click a queued order to remove it. Info panel is in three sections: top (power in use, ore, now printing, queue), middle (drones: cost, how many can deploy now), bottom (packs: cost, ore available, what each does) (owner).
+- **Drone printer**: starts level 1 as a wrecked **frame** at its usual spot, needing **8 ore** (owner approved 2026-10-23). The frame is drawn as broken plates inside a dashed amber outline, with an ore bar; its panel shows “Ore delivered: N of 8”. When the last ore arrives it becomes the working printer (“Drone printer rebuilt.”). Once built, it prints drones and upgrade packs from one queue of up to 5 orders, worked in order. A drone order waits for a free power cell; a pack order waits until the command center has 3 ore (cost is taken when printing starts). Click a queued order to remove it. Info panel is in three sections: top (power in use, ore, now printing, queue), middle (drones: cost, how many can deploy now), bottom (packs: cost, ore available, what each does) (owner).
 - **Power plant**: stores crystals; each adds a power cell.
 - **Main terminal**: needs 12 ore and 2 crystals delivered, then a repair (crew right-clicks it). Progress shows as two centred bars on the building and exact counts in its panel (owner).
 
@@ -116,11 +117,15 @@ Everything decided so far, grouped by topic. Each entry is the current rule; sup
 - Bottom right: info panel for the selected drone, group or building. It must show the selected object's own content and change as the player selects different things (owner).
 - Level complete card: title, short text, time, Play again. No crew list (owner, latest).
 
-## Level 1 (current version, to be reworked by the next spec)
+## Level 1 (current version; steps 3 to 5 of the next spec still to come)
 
 - Map 48 x 34 tiles. Start tunnel (visible from the start), wreck cavern with command center, printer and power plant, first crystal vein behind soft rock to the east, second crystal vein deep north behind 6 soft rock blocks, south route through wreckage and a long soft-rock tunnel to the anomaly, then 2 hard rock blocks to the hidden terminal cavern (5 ore veins, 3 crystal veins).
-- 12 tutorial steps: walk in, mine the first crystal, print a drone, mine the second crystal, print a third, dig to the anomaly, deliver the core, promote, print to 5 drones plus Captain, break through to the terminal, deliver 12 ore and 2 crystals, repair.
-- Start with 1 drone; end with 5 drones plus the Captain (owner's original requirement; next spec raises the cap).
+- **Opening** (owner approved 2026-10-23): one drone (Bolt) walks down the start tunnel. Two more drones stand powered down beside the command center; they are hidden in the dark, ignore orders, and wake the moment the crew sees the command center. Their power cells are lit from the start. The printer is a frame (see Buildings).
+- Ore for the printer: 4 ore buried in the clearing’s debris (rubble at 19,13 and 18,21; wreckage at 24,14 and 23,20), 1 in the start tunnel rubble, plus two ore veins (west of the wreck at 13,15, and beside the start at 3,16, 2 ore each). The second vein was added to the tutorial text so the guided route reaches 8 ore.
+- 12 tutorial steps: walk in; clear the debris for ore; mine the ore veins until the printer is rebuilt; mine the east crystal (power 3 to 5); print two drones (5 drones); dig to the anomaly; deliver the core; promote; store the anomaly’s crystals and print to **8 drones plus the Captain**; break through to the terminal; deliver 12 ore and 2 crystals; repair.
+- The north crystal vein is no longer a tutorial step; it stays on the map as an optional extra (owner approved). The deployer step will go in its place (spec step 4).
+- Free play uses the same start, with the objective “Rebuild the drone printer and grow the crew, then bring 12 ore and 2 crystals to the main terminal and repair it.”
+- Scripted test run: printer rebuilt at about 2:45 of game time.
 - A perfect scripted run takes about 11 minutes of game time; real play is expected around 18 to 25.
 
 ## Backlog (agreed, not built)
@@ -142,4 +147,7 @@ Everything decided so far, grouped by topic. Each entry is the current rule; sup
 - Shift + right-click as "mark only" (all marking queues now).
 - Pip-style ore and crystal counters on the terminal building (replaced by two centred bars).
 - Crew list on the level complete card.
+- 1 power cell per crystal; power plant starting empty.
+- Drone printer standing intact at the start; level starting with a single drone.
+- North crystal vein as a required tutorial step; tutorial goal of 5 drones plus the Captain.
 - Drone names drawn in order from a fixed list of 12 (Pip, Rivet, Sprocket…).

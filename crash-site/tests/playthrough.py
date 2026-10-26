@@ -21,7 +21,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 SRC = ROOT / "crash-site.html"
 TEST = ROOT / "tests" / "_test_build.html"
 
-HOOK = ('window.__g={get units(){return units},get items(){return items},B,command,printDrone,queuePrint,promote,addUnit,'
+HOOK = ('window.__g={get units(){return units},get items(){return items},B,command,printDrone,queuePrint,promote,addUnit,capacity,'
         'setTask,ringTiles,get jobs(){return jobs},get step(){return step},idx,closeName,get mode(){return mode},'
         'discovered,get revealed(){return revealed},get pile(){return pile}};})();')
 
@@ -66,31 +66,40 @@ def main():
             print("TIMEOUT", label, "tutorial step", val("g.step")); return False
 
         check("level starts with rubble piles", val("Array.from(g.pile).filter(v=>v===1).length") >= 10)
-        sel("true"); cmd(13, 17); check("walk down the start tunnel", waitfor("g.step>=1", 20, "walk"))
+        check("level starts with 3 drones, 2 of them powered down", val("g.units.length") == 3 and val("g.units.filter(u=>u.dormant).length") == 2)
+        check("power plant starts with 1 crystal: 3 power cells", val('g.B("plant").crystals') == 1 and val("g.capacity()") == 3)
+        check("printer starts as a frame needing 8 ore", val('g.B("printer").frame && g.B("printer").frame.need') == 8)
+        sel("k===0"); cmd(13, 17); check("walk down the start tunnel", waitfor("g.step>=1", 20, "walk"))
+        check("powered-down drones wake when the clearing is found", waitfor("g.units.every(u=>!u.dormant)", 10, "wake"))
         cmd(20, 17); waitfor("!g.units[0].path.length", 20, "walk2")
         check("move order switches the drone to manual", val("g.units[0].auto") is False)
-        cmd(27, 15)  # drone still selected: direct job order
-        check("selected drone + right-click rock starts mining", val("g.units[0].task && g.units[0].task.t") == "mine")
+        cmd(19, 13)  # drone still selected: direct job order on ore-hiding rubble
+        check("selected drone + right-click debris starts clearing", val("g.units[0].task && g.units[0].task.t") == "clear")
         check("a job order switches the drone back to auto-work", val("g.units[0].auto") is True)
-        check("first crystal stored", waitfor('g.B("plant").crystals>=1', 90, "crystal1", marks=[(28, 15)]))
-        sel("false"); cmd(20, 11); waitfor('g.units[0].task && g.units[0].task.t==="mine"', 20, "start mine")
-        before = val("g.units[0].task.i"); cmd(16, 14); pg.wait_for_timeout(300)
-        check("busy drone keeps its job when a new job is queued", val("g.units[0].task && g.units[0].task.i") == before)
-        ev("()=>window.__g.printDrone()"); waitfor("g.units.length>=2", 10, "print2"); dismiss()
-        check("second crystal stored", waitfor('g.B("plant").crystals>=2', 150, "crystal2", marks=[(20, 10), (20, 9), (20, 8), (20, 7), (20, 6), (20, 5)]))
-        ev("()=>window.__g.printDrone()"); waitfor("g.units.length>=3", 10, "print3"); dismiss()
+        sel("false")
+        check("printer frame receives ore hauled from the command center", waitfor('g.B("printer").frame && g.B("printer").frame.ore>=1', 120, "frame ore", marks=[(24, 14), (23, 20), (18, 21), (13, 15), (3, 16)]))
+        check("printer rebuilt", waitfor('!g.B("printer").frame', 200, "printer", marks=[(10, 17)]))
+        check("first crystal stored", waitfor('g.B("plant").crystals>=2', 120, "crystal1", marks=[(27, 15), (28, 15)]))
+        check("one crystal adds two power cells", val("g.capacity()") == 5)
+        cmd(20, 11); waitfor('g.units.some(u=>u.task && u.task.t==="mine" && u.task.i===g.idx(20,11))', 30, "start mine")
+        busy = val('g.units.findIndex(u=>u.task && u.task.t==="mine" && u.task.i===g.idx(20,11))')
+        cmd(16, 14); pg.wait_for_timeout(300)
+        check("busy drone keeps its job when a new job is queued", busy >= 0 and val(f"g.units[{busy}].task && g.units[{busy}].task.i") == val("g.idx(20,11)"))
+        cmd(20, 11)  # remove the north job again: it's optional now
+        ev("()=>{window.__g.printDrone(); window.__g.printDrone();}")
+        check("print two drones: five in all", waitfor("g.units.length>=5", 30, "print to 5")); dismiss()
         ev('()=>window.__g.queuePrint("red")')
-        check("mining pack printed and stored", waitfor('g.B("cc").packs.red>=1', 120, "red pack", marks=[(15, 13), (14, 16), (16, 20), (25, 18), (24, 14), (23, 20)]))
+        check("Captain's core delivered", waitfor('g.B("cc").core===true', 300, "core", marks=[(20, 24), (20, 25), (20, 26), (20, 27), (21, 28), (22, 28), (24, 28), (25, 28), (26, 28), (27, 28), (28, 28), (30, 28), (31, 28), (34, 28)]))
+        check("mining pack printed and stored", waitfor('g.B("cc").packs.red>=1', 120, "red pack", marks=[(29, 28), (15, 18), (21, 18)]))
         ev('()=>{const g=window.__g; const u=g.units[2]; g.setTask(u,{t:"install",color:"red"},g.ringTiles(g.B("cc")));}')
         check("pack fitted", waitfor('g.units[2].packs.includes("red")', 40, "install"))
         check("mining pack sets Mine mode", val("g.units[2].focus") == "mine")
-        check("Captain's core delivered", waitfor('g.B("cc").core===true', 300, "core", marks=[(20, 25), (20, 26), (20, 27), (21, 28), (22, 28), (24, 28), (25, 28), (26, 28), (27, 28), (28, 28), (30, 28), (31, 28), (34, 28)]))
         ev("()=>window.__g.promote(window.__g.units[2])"); pg.wait_for_timeout(600); dismiss()
         check("promoted drone is named Captain", val("g.units[2].name") == "Captain")
         check("promotion drops the pack", val('g.items.filter(i=>i.type==="red").length + g.units.filter(u=>u.carry==="red").length + g.B("cc").packs.red') >= 1)
         check("anomaly crystals stored", waitfor('g.B("plant").crystals>=4', 90, "anomaly crystals"))
-        for _ in range(3): ev("()=>window.__g.printDrone()")
-        check("five drones plus the Captain", waitfor("g.units.filter(u=>!u.captain).length>=5", 60, "print to 5")); dismiss()
+        for _ in range(4): ev("()=>window.__g.printDrone()")
+        check("eight drones plus the Captain", waitfor("g.units.filter(u=>!u.captain).length>=8", 60, "print to 8")); dismiss()
         names = val('g.units.map(u=>u.name).filter(n=>n!=="Bolt"&&n!=="Captain")')
         check("printed drones get unique consonant-vowel-consonant names", len(names) >= 4 and len(set(names)) == len(names) and all(len(n) == 3 and n[0].isupper() and n[1] in "aeiou" and n[2].islower() and n[2] not in "aeiou" for n in names))
         check("terminal discovered", waitfor('g.discovered(g.B("terminal"))', 150, "terminal", marks=[(35, 28), (35, 27)]))

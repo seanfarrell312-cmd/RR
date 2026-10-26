@@ -2,12 +2,12 @@
 
 A top-down 2D real-time strategy / automation game that runs in the browser. You are the control program of a crashed starship's robot crew: wake drones, mine and clear the buried wreck, store power crystals, and rebuild the ship section by section. Loosely inspired by LEGO Rock Raiders. Everything here is original: no Rock Raiders or Manic Miners files, art, names or code are used, and none should be.
 
-Current state: level 1 (tutorial) is fully playable start to finish, plus a free play mode.
+Current state: level 1 (tutorial) is fully playable start to finish, plus a free play mode. The next update (see `docs/FEATURE_SPEC_next.md`) is being built in steps; steps 1 and 2 are done.
 
 ## Files
 
 - `crash-site.html`: the entire game. One self-contained file (HTML, CSS, JavaScript, Canvas 2D). No build step, no dependencies besides an optional Google Font with a system fallback.
-- `tests/playthrough.py`: automated regression test. Plays all of level 1 at 18x speed and checks 20 rules.
+- `tests/playthrough.py`: automated regression test. Plays all of level 1 at 18x speed and checks its rules (29 checks).
 - `docs/DESIGN_LOG.md`: every design decision made so far, with the reasoning. Read it before changing gameplay.
 - `docs/FEATURE_SPEC_next.md`: the next planned update, including open questions that must be answered before building.
 - `README.md`: setup notes for humans.

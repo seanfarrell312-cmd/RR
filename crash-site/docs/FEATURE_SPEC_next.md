@@ -57,8 +57,8 @@ Technical choices that affect play (owner accepted with the above):
 
 ## Build steps (one playable change each; owner playtests between)
 
-1. Name generator and the 20-crew fleet cap.
-2. New start: command center and power plant (1 crystal stored, 2 cells per crystal), 3 drones, printer rebuilt at a wreck frame from floor-debris ore; tutorial steps for the new opening.
+1. Name generator and the 20-crew fleet cap. **Done.**
+2. **Done.** New start: command center and power plant (1 crystal stored, 2 cells per crystal), 3 drones, printer rebuilt at a wreck frame from floor-debris ore; tutorial steps for the new opening.
 3. Build menu, placement ghost, construction frame and hauling; the deployer.
 4. Deployer behaviour (drones appear there, crew list) and its tutorial step.
 5. Bigger map with more veins, then pacing and balance pass.

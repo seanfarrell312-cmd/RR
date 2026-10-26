@@ -318,6 +318,8 @@ const PRINT_TIME = 3;
 const REPAIR_NEED = 10;
 const NEED_ORE = 12, NEED_CRY = 2;
 const FLEET_MAX = 20;               // crew limit, Captain included
+const CELLS_PER_CRYSTAL = 2;
+const PRINTER_COST = 8;            // ore to rebuild the wrecked printer
 const NAME_C1 = "BDFGKLMNPRSTVZ", NAME_V = "aeiou", NAME_C2 = "bdgklmnprstvxz";
 const NAME_SKIP = ["Fuk", "Dik", "Kok", "Tit", "Fag", "Nig", "Kum", "Pis", "Gay", "Sex", "Fat", "Pus", "Dum", "Nob", "Bum", "Gun", "Kil", "Ded"];
 const RUBBLE = 1, WRECK = 2;
@@ -349,7 +351,7 @@ const rnd = (i, k) => { let h = (i * 374761393 + k * 668265263) | 0; h = (h ^ (h
 const B = kind => buildings.find(b => b.kind === kind);
 const drones = () => units.filter(u => !u.captain);
 const captain = () => units.find(u => u.captain);
-const capacity = () => 1 + B("plant").crystals;
+const capacity = () => 1 + CELLS_PER_CRYSTAL * B("plant").crystals;
 const used = () => drones().length + (B("printer").cur === "drone" ? 1 : 0);
 const fleetRoom = () => FLEET_MAX - units.length - (B("printer").cur === "drone" ? 1 : 0);
 const has = (u, c) => u.packs.filter(p => p === c).length;
@@ -378,12 +380,14 @@ function init(free) {
   }
   buildings = [];
   mkBuilding("cc", 17, 15, { ore: 0, core: false, packs: { red: 0, blue: 0, green: 0 } });
-  mkBuilding("printer", 21, 15, { timer: 0, total: 0, cur: null, queue: [] });
-  mkBuilding("plant", 19, 19, { crystals: 0 });
+  mkBuilding("printer", 21, 15, { timer: 0, total: 0, cur: null, queue: [], frame: { ore: 0, need: PRINTER_COST } });
+  mkBuilding("plant", 19, 19, { crystals: 1 });
   mkBuilding("terminal", 40, 23, { ore: 0, crystal: 0, repair: 0, active: false });
   units = []; items = []; particles = [];
   nextId = 1; step = 0; elapsed = 0; winTimer = -1; selBuilding = null; paused = false;
   addUnit("Bolt", start[0], start[1]);
+  // two drones powered down in the clearing; they wake when the crew finds the command center
+  for (const x of [17, 18]) addUnit(newName(), x, 17).dormant = true;
   for (let x = 0; x <= 13; x++) for (let y = start[1] - 1; y <= start[1] + 1; y++) if (inb(x, y)) revealed[idx(x, y)] = 1;
   revealAll();
   cam.x = (start[0] + 5) * TS; cam.y = start[1] * TS; cam.z = 1.4;
@@ -397,7 +401,7 @@ function mkBuilding(kind, x, y, extra) {
 }
 function addUnit(name, tx, ty) {
   const u = { id: nextId++, name, x: (tx + .5) * TS, y: (ty + .5) * TS, captain: false, sel: false, task: null, path: [], carry: null, dir: 0, promoT: 0, bob: Math.random() * 6,
-    auto: true, focus: "all", holdT: 0, thinkT: Math.random() * .4, blocked: false, packs: [], slots: 1 };
+    auto: true, focus: "all", holdT: 0, thinkT: Math.random() * .4, blocked: false, packs: [], slots: 1, dormant: false };
   units.push(u);
   return u;
 }
@@ -462,7 +466,7 @@ function revealFrom(sx, sy, maxD) {
     }
   }
 }
-function revealAll() { for (const u of units) { const [x, y] = tileOf(u); revealFrom(x, y, 11); } }
+function revealAll() { for (const u of units) if (!u.dormant) { const [x, y] = tileOf(u); revealFrom(x, y, 11); } }
 const discovered = b => revealed[idx(b.x, b.y)] === 1;
 
 // ---------- items ----------
@@ -474,15 +478,19 @@ function itemAt(wx, wy, r = 13) {
 }
 const ITEM_NAME = { crystal: "power crystal", ore: "ore", core: "power core", red: "mining pack", blue: "clearing pack", green: "gathering pack" };
 function accepts(b, type) {
+  if (b.frame) return type === "ore" && b.frame.ore + framePending(b) < b.frame.need;
   if (b.kind === "cc") return type === "ore" || type === "core" || PACKS.includes(type);
   if (b.kind === "plant") return type === "crystal";
   if (b.kind === "terminal") return !b.active && discovered(b) && ((type === "ore" && b.ore + pendingTo(b, "ore") < NEED_ORE) || (type === "crystal" && b.crystal + pendingTo(b, "crystal") < NEED_CRY));
   return false;
 }
 function canTake(b, type) {
+  if (b.frame) return type === "ore" && b.frame.ore < b.frame.need;
   if (b.kind === "terminal") return !b.active && ((type === "ore" && b.ore < NEED_ORE) || (type === "crystal" && b.crystal < NEED_CRY));
   return accepts(b, type);
 }
+// ore already on its way to a construction frame: carried there, or being fetched from the command center for it
+function framePending(b) { return units.filter(u => u.task && u.task.b === b && ((u.task.t === "deliver" && u.carry === "ore") || (u.task.t === "supply" && !u.carry))).length; }
 function pendingTo(b, type) { return units.filter(u => u.task && u.task.t === "deliver" && u.task.b === b && u.carry === type).length; }
 function defaultTarget(type) {
   const term = B("terminal");
@@ -495,7 +503,8 @@ function deposit(u, b) {
   u.carry = null;
   const [cx, cy] = bCenter(b);
   burst(cx, cy, type === "ore" ? "#9fb9db" : "#ffb547", 14);
-  if (b.kind === "plant") { b.crystals++; flashCell = capacity() - 1; }
+  if (b.frame) { b.frame.ore++; if (b.frame.ore >= b.frame.need) completeFrame(b); }
+  else if (b.kind === "plant") { b.crystals++; flashCell = capacity() - 1; }
   else if (b.kind === "cc" && type === "ore") b.ore++;
   else if (b.kind === "cc" && PACKS.includes(type)) b.packs[type]++;
   else if (b.kind === "cc" && type === "core") { b.core = true; burst(cx, cy, "#fff1d0", 40); toast("Power core installed in the command center."); }
@@ -503,12 +512,19 @@ function deposit(u, b) {
   renderPower(); renderSel(true);
 }
 const bCenter = b => [(b.x + b.w / 2) * TS, (b.y + b.h / 2) * TS];
+function completeFrame(b) {
+  b.frame = null;
+  const [cx, cy] = bCenter(b);
+  burst(cx, cy, "#5fe0d0", 40); burst(cx, cy, "#ffffff", 16);
+  toast(`${cap1(label(b))} rebuilt.`);
+  for (const o of units) if (o.task && o.task.b === b && (o.task.t === "supply" || o.task.t === "goto")) { o.task = null; o.thinkT = 0; }
+}
 const LABELS = { cc: "command center", printer: "drone printer", plant: "power plant", terminal: "main terminal" };
-const label = b => LABELS[b.kind];
+const label = b => b.frame ? `${LABELS[b.kind]} frame` : LABELS[b.kind];
 
 // ---------- commands ----------
 function command(wx, wy, shift) {
-  const sel = units.filter(u => u.sel);
+  const sel = units.filter(u => u.sel && !u.dormant);   // powered-down drones ignore orders
   const tx = Math.floor(wx / TS), ty = Math.floor(wy / TS);
   if (!inb(tx, ty)) return;
   const i = idx(tx, ty);
@@ -537,6 +553,7 @@ function command(wx, wy, shift) {
     const ready = term && b.ore >= NEED_ORE && b.crystal >= NEED_CRY;
     for (const u of sel) {
       if (u.carry && canTake(b, u.carry)) setTask(u, { t: "deliver", b }, ringTiles(b));
+      else if (b.frame && canHaul(u)) { u.auto = true; setTask(u, { t: "supply", b }, ringTiles(B("cc"))); }
       else if (ready) setTask(u, { t: "repair", b }, ringTiles(b));
       else if (setTask(u, { t: "goto", b }, ringTiles(b))) u.auto = false;
     }
@@ -599,6 +616,11 @@ function nextToBuilding(u, b) {
   return x >= b.x - 1 && x <= b.x + b.w && y >= b.y - 1 && y <= b.y + b.h;
 }
 function updateUnit(u, dt) {
+  if (u.dormant) {
+    if (!discovered(B("cc"))) return;
+    u.dormant = false; u.thinkT = .3 + Math.random() * .6;
+    burst(u.x, u.y, "#5fe0d0", 14);
+  }
   u.bob += dt * 6;
   if (u.promoT > 0) u.promoT = Math.max(0, u.promoT - dt);
   if (u.path.length) {
@@ -650,8 +672,19 @@ function updateUnit(u, dt) {
     setTask(u, { t: "deliver", b }, ringTiles(b));
     return;
   }
+  if (k.t === "supply") {
+    // fetch one ore from the command center for a construction frame
+    const cc = B("cc"), b = k.b;
+    if (!b.frame || u.carry || !canHaul(u)) { u.task = null; return; }
+    if (!nextToBuilding(u, cc)) { if (!setTask(u, k, ringTiles(cc))) u.task = null; return; }
+    if (cc.ore <= 0) { u.task = null; u.thinkT = 0; return; }
+    cc.ore--; u.carry = "ore";
+    setTask(u, { t: "deliver", b, supply: true }, ringTiles(b));
+    return;
+  }
   if (k.t === "deliver") {
     if (!u.carry) { u.task = null; return; }
+    if (k.supply && !canTake(k.b, u.carry)) { u.task = null; return; }   // frame finished meanwhile: take it back to storage
     if (!nextToBuilding(u, k.b)) { if (!setTask(u, k, ringTiles(k.b))) u.task = null; return; }
     deposit(u, k.b);
     u.task = null; u.thinkT = 0;
@@ -689,8 +722,8 @@ function updateUnit(u, dt) {
 // idle brain. Jobs go oldest-first (in marking order); a job takes as many helpers as it has open sides.
 // Focus decides what a drone looks for first: clear = haul, then clear rubble, then mine;
 // mine = mine, then clear, then haul; collect = haul and clear rubble, never mines.
-const FOCUS_ORDER = { all: ["item", "clear", "mine"], mine: ["mine"], clear: ["clear"], collect: ["item"] };
-const ALLOWED = { item: canHaul, clear: canClear, mine: u => !has(u, "blue") };
+const FOCUS_ORDER = { all: ["item", "supply", "clear", "mine"], mine: ["mine"], clear: ["clear"], collect: ["item", "supply"] };
+const ALLOWED = { item: canHaul, supply: canHaul, clear: canClear, mine: u => !has(u, "blue") };
 function think(u) {
   const [x, y] = tileOf(u);
   const { dist, prev, s } = dijkstra(x, y, null);
@@ -723,9 +756,19 @@ function think(u) {
     if (!best) return null;
     return { task: { t: "fetch", item: best }, goal: idx(Math.floor(best.x / TS), Math.floor(best.y / TS)) };
   };
+  const pickSupply = () => {
+    const cc = B("cc"), fetching = units.filter(o => o.task && o.task.t === "supply" && !o.carry).length;
+    if (cc.ore - fetching <= 0) return null;
+    const b = buildings.find(f => f.frame && discovered(f) && accepts(f, "ore"));
+    if (!b) return null;
+    let best = -1, bd = Infinity;
+    for (const a of ringTiles(cc)) if (dist[a] < bd) { bd = dist[a]; best = a; }
+    return best < 0 ? null : { task: { t: "supply", b }, goal: best };
+  };
+  const supplyWanted = () => B("cc").ore > 0 && buildings.some(f => f.frame && discovered(f) && accepts(f, "ore"));
   for (const c of FOCUS_ORDER[u.focus]) {
-    if (!ALLOWED[c](u)) { if (c === "item" ? items.length : list.some(([j]) => jobKind(j) === c)) wanted = true; continue; }
-    const r = c === "item" ? pickItem() : pickJob(c);
+    if (!ALLOWED[c](u)) { if (c === "item" ? items.length : c === "supply" ? supplyWanted() : list.some(([j]) => jobKind(j) === c)) wanted = true; continue; }
+    const r = c === "item" ? pickItem() : c === "supply" ? pickSupply() : pickJob(c);
     if (r) {
       if (r.task.t === "fetch") r.task.item.claim = u.id;
       u.task = r.task; u.path = r.goal === s ? [] : trace(prev, s, r.goal); u.blocked = false;
@@ -787,6 +830,7 @@ function nudge(u, dx, dy) {
 // ---------- printer, promotion ----------
 function queuePrint(kind) {
   const p = B("printer");
+  if (p.frame) { toast(`The printer needs ${p.frame.need - p.frame.ore} more ore before it can print.`); return; }
   if (p.queue.length + (p.cur ? 1 : 0) >= QUEUE_MAX) { toast(`The printer queue is full (${QUEUE_MAX} orders).`); return; }
   if (kind === "drone" && p.queue.filter(k => k === "drone").length >= fleetRoom()) { toast(`The crew is full (${FLEET_MAX}, Captain included).`); return; }
   p.queue.push(kind); renderSel(true);
@@ -794,6 +838,7 @@ function queuePrint(kind) {
 const printDrone = () => queuePrint("drone");
 function updatePrinter(dt) {
   const p = B("printer"), cc = B("cc");
+  if (p.frame) return;
   if (!p.cur && p.queue.length) {
     const k = p.queue[0];
     if (k === "drone" ? used() < capacity() && fleetRoom() > 0 : cc.ore >= PACK_COST) {
@@ -866,25 +911,27 @@ function promote(u) {
 const T = (x, y) => [(x + .5) * TS, (y + .5) * TS];
 const anyItem = type => items.some(i => i.type === type) || units.some(u => u.carry === type) || [...buried.values()].some(l => l.includes(type));
 const firstOpen = list => { for (const [x, y] of list) { const i = idx(x, y); if (isMineable(tType[i]) || pile[i]) return T(x, y); } return null; };
+const DEBRIS_ORE = [[19, 13], [24, 14], [23, 20], [18, 21]];
+const frameProg = () => { const f = B("printer").frame; return `Printer frame: ${f ? f.ore : PRINTER_COST} of ${PRINTER_COST} ore`; };
 const STEPS = [
   { msg: "Core OS online. One drone is answering. Left-click it to select it, then right-click the open space at the end of the tunnel to send it there.",
     target: () => T(13, 17), done: () => units.some(u => tileOf(u)[0] >= 12) },
-  { msg: "Wreckage. A command center, a drone printer and a power plant survived the crash, and the command center is what’s keeping your one drone alive. There’s a crystal vein behind the soft rock to the east. With your drone selected, right-click the rock. A drone given a job goes back to auto-work, so it mines, clears the rubble and hauls what it finds on its own. Queue the vein the same way once it’s exposed.",
-    target: () => firstOpen([[27, 15], [28, 15]]) || bCenter(B("plant")), prog: () => `Crystals stored: ${Math.min(1, B("plant").crystals)} of 1`, done: () => B("plant").crystals >= 1 },
-  { msg: "Each stored crystal adds a power cell (top left). Click the drone printer, then press Print drone.",
-    target: () => bCenter(B("printer")), done: () => drones().length >= 2 },
-  { msg: "A third drone needs a third power cell. Another crystal vein lies north of the wreck, behind several blocks of soft rock. Right-click each block to queue it. Jobs are worked in the order you queue them.",
-    target: () => firstOpen([[20, 11], [20, 10], [20, 9], [20, 8], [20, 7], [20, 6], [20, 5]]) || bCenter(B("plant")), prog: () => `Crystals stored: ${Math.min(2, B("plant").crystals)} of 2`, done: () => B("plant").crystals >= 2 },
-  { msg: "Power for three. Print your third drone.",
-    target: () => bCenter(B("printer")), prog: () => `Drones: ${drones().length} of 3`, done: () => drones().length + (captain() ? 1 : 0) >= 3 },
+  { msg: "Wreckage. The command center and power plant survived the crash, and two more drones were waiting here. The drone printer didn’t make it. Its frame needs 8 ore to rebuild. Ore is buried in the debris on the floor. Right-click rubble and wreckage to queue it for clearing. A drone you have selected when you give it a job goes back to auto-work, so it clears, hauls and builds on its own.",
+    target: () => firstOpen(DEBRIS_ORE) || bCenter(B("printer")), prog: frameProg, done: () => !B("printer").frame || DEBRIS_ORE.every(([x, y]) => !pile[idx(x, y)]) },
+  { msg: "The debris won’t cover it all. Ore veins show as blue flecks in soft rock. There’s one just west of the wreck and another beside the spot where your first drone woke. Queue them.",
+    target: () => firstOpen([[13, 15], [3, 16]]) || bCenter(B("printer")), prog: frameProg, done: () => !B("printer").frame },
+  { msg: "Printer online. More drones need more power. There’s a crystal vein behind the soft rock to the east. Queue the rock, then the vein once it’s exposed. Each stored crystal adds two power cells.",
+    target: () => firstOpen([[27, 15], [28, 15]]) || bCenter(B("plant")), prog: () => `Crystals stored: ${Math.min(2, B("plant").crystals)} of 2`, done: () => B("plant").crystals >= 2 },
+  { msg: "Two new power cells (top left). Click the drone printer and print two drones.",
+    target: () => bCenter(B("printer")), prog: () => `Drones: ${drones().length} of 5`, done: () => drones().length + (captain() ? 1 : 0) >= 5 },
   { msg: "Core OS is picking up a weird reading to the south. Wreckage and soft rock block the way. Mark a path through, and mark the glowing source at the end of the tunnel once you can see it.",
     target: () => firstOpen([[20, 25], [20, 26], [20, 27], [21, 28], [22, 28], [24, 28], [25, 28], [26, 28], [27, 28], [28, 28], [30, 28], [31, 28], [34, 28]]), done: () => anyItem("core") || B("cc").core },
   { msg: "The source was a power core, and it carries the Captain’s signature. It’s buried in the rubble. Once it’s dug out, a drone will carry it to the command center.",
     target: () => { const c = items.find(i => i.type === "core"); return c ? [c.x, c.y] : !B("cc").core ? T(34, 28) : bCenter(B("cc")); }, done: () => !!B("cc").core },
   { msg: "Core installed. Select one drone and press Promote to Captain in its panel (bottom right). Choose well. This one leads the crew.",
     target: () => bCenter(B("cc")), done: () => !!captain() },
-  { msg: "The Captain draws no power, so the crew has room to grow. Store the anomaly’s two crystals, then print drones until you have five plus the Captain.",
-    target: () => bCenter(B("printer")), prog: () => `Drones: ${drones().length} of 5, crystals stored: ${B("plant").crystals} of 4`, done: () => drones().length >= 5 },
+  { msg: "The Captain draws no power, so the crew has room to grow. Store the anomaly’s two crystals, then print drones until you have eight plus the Captain.",
+    target: () => bCenter(B("printer")), prog: () => `Drones: ${drones().length} of 8, crystals stored: ${B("plant").crystals} of 4`, done: () => drones().length >= 8 },
   { msg: "Scans place the ship’s main terminal just past the anomaly, behind hard rock. Only the Captain can cut hard rock. Mark the rock beside the anomaly site.",
     target: () => firstOpen([[35, 28], [35, 27]]) || T(36, 27), done: () => discovered(B("terminal")) },
   { msg: "Main terminal found. Mark the ore and crystal veins around it, plus any hard rock for the Captain. Everything the crew digs up now goes straight to the terminal.",
@@ -901,7 +948,7 @@ function updateObjective(force) {
   if (!changed) return;
   if (freePlay) {
     $("objStep").textContent = "Free play";
-    $("objMsg").textContent = `Wake five drones and the Captain, then bring ${NEED_ORE} ore and ${NEED_CRY} crystals to the main terminal and repair it.`;
+    $("objMsg").textContent = `Rebuild the drone printer and grow the crew, then bring ${NEED_ORE} ore and ${NEED_CRY} crystals to the main terminal and repair it.`;
   } else if (step < STEPS.length) {
     $("objStep").textContent = `Core OS, step ${step + 1} of ${STEPS.length}`;
     $("objMsg").textContent = STEPS[step].msg;
@@ -949,7 +996,7 @@ function renderPower() {
   if (tipUnit) showTip(tipUnit);
 }
 let tipUnit = null, lastStat = "";
-const isIdle = u => !u.task && !u.path.length && !u.carry && !u.blocked && u.holdT <= 0;
+const isIdle = u => !u.dormant && !u.task && !u.path.length && !u.carry && !u.blocked && u.holdT <= 0;
 function showTip(u) {
   if (!units.includes(u)) { hideTip(); return; }
   tipUnit = u;
@@ -974,13 +1021,14 @@ function renderSel(force) {
   if (selBuilding) {
     const b = selBuilding, p = B("plant");
     const info = {
+      frame: () => [`The crash wrecked the ${LABELS[b.kind]}. Drones carry ore from the command center to rebuild it.`, [["Ore delivered", `${b.frame.ore} of ${b.frame.need}`], ["Ore in command center", cc.ore]]],
       cc: () => ["The ship’s brain, salvaged. It supplies 1 power on its own, stores ore and upgrade packs, and fits packs to drones. Install a power core here to wake a named crew member.", [["Power supplied", "1"], ["Ore stored", b.ore], ...PACKS.map(c => [`<i class="pk" style="background:${PACK_COLOR[c]}"></i>${PACK_NAME[c]}s`, b.packs[c]]), ["Power core", b.core === true ? "Installed" : b.core === "used" ? "Awakened" : "None"]]],
       printer: () => [`Prints drones and upgrade packs. Orders run one at a time, up to ${QUEUE_MAX} in the queue.`, [["Power in use", `${used()} of ${capacity()}`], ["Ore in command center", cc.ore], ["Now", b.cur ? `Printing ${b.cur === "drone" ? "a drone" : "a " + ITEM_NAME[b.cur]}…` : printerWait() || "Ready"]]],
-      plant: () => ["Every crystal stored here adds 1 power cell.", [["Crystals stored", p.crystals], ["Power added", p.crystals]]],
+      plant: () => [`Every crystal stored here adds ${CELLS_PER_CRYSTAL} power cells.`, [["Crystals stored", p.crystals], ["Power added", p.crystals * CELLS_PER_CRYSTAL]]],
       terminal: () => ["Repair it to link this section to the rest of the ship.", [["Ore", `${b.ore} of ${NEED_ORE}`], ["Crystals", `${b.crystal} of ${NEED_CRY}`], ["Repair", b.active ? "Online" : `${Math.floor(b.repair / REPAIR_NEED * 100)}%`]]],
-    }[b.kind]();
+    }[b.frame ? "frame" : b.kind]();
     let extra = "";
-    if (b.kind === "printer" && (freePlay || p.crystals > 0)) {
+    if (b.kind === "printer" && !b.frame) {
       const full = b.queue.length + (b.cur ? 1 : 0) >= QUEUE_MAX;
       const freeCells = Math.max(0, Math.min(capacity() - used(), fleetRoom())), queuedDrones = b.queue.filter(k => k === "drone").length, afford = Math.floor(cc.ore / PACK_COST);
       extra = (b.queue.length ? `<div class="queue">Queue: ${b.queue.map((k, n) => `<button class="qchip" data-dq="${n}" title="Remove from queue">${k === "drone" ? "Drone" : `<i class="pk" style="background:${PACK_COLOR[k]}"></i>`} ×</button>`).join("")}</div>` : "") +
@@ -1033,11 +1081,11 @@ function focusHTML(f, tint) {
   return `<div class="focus" role="group" aria-label="Work mode"${bd}>${["all", "mine", "clear", "collect"].map(k => `<button data-focus="${k}" class="${f === k ? "on" : ""}" aria-pressed="${f === k}"${f === k ? st : ""}>${k === "all" ? "All-round" : cap1(k)}</button>`).join("")}</div><p class="focus-info">${f ? FOCUS_INFO[f] : "Mixed modes. Pick one to set them all."}</p>`;
 }
 function wireFocus(list) {
-  const covers = { all: ["mine", "clear", "fetch"], mine: ["mine"], clear: ["clear"], collect: ["fetch"] };
+  const covers = { all: ["mine", "clear", "fetch", "supply"], mine: ["mine"], clear: ["clear"], collect: ["fetch", "supply"] };
   for (const btn of $("sel").querySelectorAll("[data-focus]")) btn.onclick = () => {
     for (const u of list) {
       u.focus = btn.dataset.focus; u.thinkT = 0;
-      if (u.task && ["mine", "clear", "fetch"].includes(u.task.t) && !covers[u.focus].includes(u.task.t)) { u.task = null; u.path = []; }
+      if (u.task && ["mine", "clear", "fetch", "supply"].includes(u.task.t) && !covers[u.focus].includes(u.task.t)) { u.task = null; u.path = []; }
     }
     renderSel(true);
   };
@@ -1045,8 +1093,9 @@ function wireFocus(list) {
 function statusOf(u) {
   const k = u.task;
   const c = u.carry ? `Carrying ${ITEM_NAME[u.carry]}` : null;
+  if (u.dormant) return "Powered down";
   if (!k) return c || (u.holdT > 0 ? "Holding position" : u.blocked ? "Blocked: no job it can do" : u.auto ? "Idle" : "Idle (auto-work off)");
-  return { move: "Moving", goto: "Moving", mine: "Mining", clear: "Clearing rubble", fetch: "Fetching", deliver: c || "Delivering", repair: "Repairing", install: `Fitting a ${ITEM_NAME[k.color]}`, uninstall: `Removing a ${ITEM_NAME[k.color]}` }[k.t];
+  return { move: "Moving", goto: "Moving", mine: "Mining", clear: "Clearing rubble", fetch: "Fetching", deliver: c || "Delivering", repair: "Repairing", supply: "Fetching ore to build", install: `Fitting a ${ITEM_NAME[k.color]}`, uninstall: `Removing a ${ITEM_NAME[k.color]}` }[k.t];
 }
 const cap1 = s => s[0].toUpperCase() + s.slice(1);
 const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -1189,6 +1238,7 @@ function bar(x, y, w, f, c) { ctx.fillStyle = "rgba(0,0,0,.6)"; ctx.fillRect(x -
 function drawBuilding(b) {
   if (!discovered(b)) return;
   const px = b.x * TS, py = b.y * TS, w = b.w * TS, h = b.h * TS;
+  if (b.frame) { drawFrame(b, px, py, w, h); return; }
   ctx.fillStyle = "rgba(0,0,0,.35)"; rr(px + 3, py + 6, w - 2, h - 2, 8); ctx.fill();
   const hull = b.kind === "terminal" && !b.active ? "#4a505c" : "#7d8799";
   ctx.fillStyle = "#4b5261"; rr(px + 2, py + 2, w - 4, h - 4, 8); ctx.fill();
@@ -1234,6 +1284,22 @@ function drawBuilding(b) {
   const hv = hoverTile();
   if (selBuilding === b || (hv && bldAt[idx(hv[0], hv[1])] === b.id)) tag(cap1(label(b)), cx, py + h + 12);
 }
+// construction site: broken plates inside a dashed frame, with an ore bar
+function drawFrame(b, px, py, w, h) {
+  ctx.fillStyle = "rgba(0,0,0,.3)"; rr(px + 2, py + 2, w - 4, h - 4, 6); ctx.fill();
+  for (let k = 0; k < 5; k++) {
+    const r1 = rnd(b.id * 7 + k, 3), r2 = rnd(b.id * 7 + k, 5);
+    ctx.fillStyle = k % 2 ? "#4b5261" : "#5b6474";
+    ctx.save(); ctx.translate(px + 10 + r1 * (w - 20), py + 10 + r2 * (h - 24)); ctx.rotate(r1 * 3); ctx.fillRect(-6, -3, 12, 6); ctx.restore();
+  }
+  ctx.strokeStyle = "#ffb547"; ctx.lineWidth = 1.5; ctx.setLineDash([5, 4]); rr(px + 3, py + 3, w - 6, h - 6, 6); ctx.stroke(); ctx.setLineDash([]);
+  const bw = w - 24, bx = px + 12;
+  ctx.fillStyle = "#2b3142"; ctx.fillRect(bx, py + h - 12, bw, 4);
+  ctx.fillStyle = "#8fb0d8"; ctx.fillRect(bx, py + h - 12, bw * Math.min(1, b.frame.ore / b.frame.need), 4);
+  if (selBuilding === b) { ctx.strokeStyle = "#5fe0d0"; ctx.lineWidth = 2; ctx.setLineDash([6, 4]); ctx.lineDashOffset = -now * 12; rr(px, py, w, h, 9); ctx.stroke(); ctx.setLineDash([]); }
+  const hv = hoverTile();
+  if (selBuilding === b || (hv && bldAt[idx(hv[0], hv[1])] === b.id)) tag(cap1(label(b)), px + w / 2, py + h + 12);
+}
 function tag(text, x, y, packs) {
   ctx.font = `600 11px ${FONT}`;
   const tw = ctx.measureText(text).width, pw = packs && packs.length ? packs.length * 10 + 3 : 0, w = tw + pw + 10;
@@ -1269,6 +1335,7 @@ function drawUnit(u) {
   if (u.promoT > 0) { const t = 1 - u.promoT / 1.6; sc = 1 + Math.sin(t * Math.PI) * .5; glow(u.x, u.y, 50 * (1 - t) + 10, "rgba(242,193,78,.95)", u.promoT / 1.6); }
   const bob = u.path.length ? Math.sin(u.bob * 2) * .8 : 0;
   ctx.save(); ctx.translate(u.x, u.y + bob); ctx.scale(sc, sc);
+  if (u.dormant) ctx.globalAlpha = .55;
   ctx.fillStyle = "rgba(0,0,0,.4)"; ctx.beginPath(); ctx.ellipse(1, 6, r + 1, r * .55, 0, 0, 6.28); ctx.fill();
   if (u.sel) { ctx.strokeStyle = "#5fe0d0"; ctx.lineWidth = 2; ctx.setLineDash([5, 4]); ctx.lineDashOffset = -now * 14; ctx.beginPath(); ctx.arc(0, 0, r + 5, 0, 6.28); ctx.stroke(); ctx.setLineDash([]); }
   ctx.save(); ctx.rotate(u.dir);
@@ -1285,8 +1352,8 @@ function drawUnit(u) {
   u.packs.forEach((c, k) => { ctx.fillStyle = PACK_COLOR[c]; ctx.fillRect(-r * .55 + k * 5 - (u.packs.length - 1) * 2.5, r * .25, 4.5, 4.5); });
   const vx = Math.cos(u.dir), vy = Math.sin(u.dir);
   ctx.fillStyle = "#1a2330"; ctx.beginPath(); ctx.ellipse(vx * r * .45, vy * r * .45, r * .55, r * .4, u.dir, 0, 6.28); ctx.fill();
-  const eye = cap ? "#ffb547" : "#5fe0d0";
-  glow(vx * r * .6, vy * r * .6, 6, cap ? "rgba(255,181,71,.9)" : "rgba(95,224,208,.9)", .8);
+  const eye = u.dormant ? "#3a4250" : cap ? "#ffb547" : "#5fe0d0";
+  if (!u.dormant) glow(vx * r * .6, vy * r * .6, 6, cap ? "rgba(255,181,71,.9)" : "rgba(95,224,208,.9)", .8);
   ctx.fillStyle = eye; ctx.beginPath(); ctx.arc(vx * r * .6, vy * r * .6, 2.2, 0, 6.28); ctx.fill();
   ctx.restore();
   if (u.carry) drawItem(u.carry, u.x, u.y - r - 9 + bob, .8);
@@ -1339,7 +1406,7 @@ function draw() {
   for (const b of buildings) drawBuilding(b);
   for (const it of items) drawItem(it.type, it.x, it.y);
   for (const u of units) if (u.sel && u.path.length) { ctx.strokeStyle = "rgba(95,224,208,.25)"; ctx.lineWidth = 1.5; ctx.setLineDash([3, 5]); ctx.beginPath(); ctx.moveTo(u.x, u.y); for (const j of u.path) ctx.lineTo(...center(j)); ctx.stroke(); ctx.setLineDash([]); }
-  for (const u of units) drawUnit(u);
+  for (const u of units) if (!u.dormant || revealed[idx(...tileOf(u))]) drawUnit(u);
   for (const p of particles) { ctx.globalAlpha = Math.max(0, p.life / p.max); ctx.fillStyle = p.c; ctx.fillRect(p.x - p.s / 2, p.y - p.s / 2, p.s, p.s); }
   ctx.globalAlpha = 1;
   for (const p of pings) { ctx.strokeStyle = `rgba(95,224,208,${p.t * 2})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(p.x, p.y, 6 + (1 - p.t * 2) * 12, 0, 6.28); ctx.stroke(); }
