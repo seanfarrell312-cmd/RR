@@ -1,6 +1,6 @@
 # Next update: the base-building level flow
 
-Status: **specified by the owner; open questions answered (owner approved all proposals, 2026-10-23). Being built in the steps listed below.** The bug-fix deployment that preceded this spec is done and live.
+Status: **specified by the owner; open questions answered (owner approved all proposals, 2026-10-23), playtest changes decided (2026-10-30). Being built in the steps listed below.** The bug-fix deployment that preceded this spec is done and live.
 
 ## Why
 
@@ -53,25 +53,49 @@ Set mining tasks, deploy more workers, gradually specialise some with packs to s
 
 Technical choices that affect play (owner accepted with the above):
 - Rubble, wreckage, buildings and walls block a building footprint. Drones and items standing in it don’t; drones step out once the frame is placed.
-- Hauling ore to a construction frame is auto-work, with the same priority as hauling loose items, in All-round and Collect modes.
+- Hauling ore to a construction frame is auto-work, with the same priority as hauling loose items, in All-round and Collect modes. (Changed 2026-10-30: only once the player starts the build with a construct job; see playtest decision 6.)
 
 ## Build steps (one playable change each; owner playtests between)
 
 1. Name generator and the 20-crew fleet cap. **Done.**
 2. **Done.** New start: command center and power plant (1 crystal stored, 2 cells per crystal), 3 drones, printer rebuilt at a wreck frame from floor-debris ore; tutorial steps for the new opening.
-3. Build menu, placement ghost, construction frame and hauling; the deployer.
+2a. Playtest decisions A: no naming pop-up, quick-succession printing.
+2b. Playtest decisions B: construct job; building only when the player starts it.
+2c. Playtest decisions C: fog of war.
+2d. Playtest decisions D: several drones per wall.
+3. Build menu, placement ghost, construction frame (started with a construct job); the deployer.
 4. Deployer behaviour (drones appear there, crew list) and its tutorial step.
 5. Bigger map with more veins, then pacing and balance pass.
 
-## Owner notes, 2026-10-30 (to be turned into numbered decisions before step 3)
+## Playtest decisions (owner approved all proposals, 2026-10-30)
 
-The owner playtested step 2 and asked for these changes. They come after the move to the web (see the design log) and before the Build menu.
+The owner playtested step 2 and asked for five changes: building only when the player says so, several drones per wall, a stricter fog of war, no naming pop-up, and quick-succession printing. They were turned into these decisions, built in steps 2a to 2d before the Build menu.
 
-1. **Building is player-initiated.** Ore from debris and walls only goes to the command center for storage. Drones must not carry ore to a build site until the player chooses to start building (the printer included). Suggested: a new **construct** job type that drones treat like any other queued job, handled the same way.
-2. **Several drones per wall.** Rework how drones take mining jobs, especially walls reachable from only one tile. Up to 3 or 4 drones should be able to work one wall face together without overlapping, Rock Raiders style, so they help each other and mining goes faster. Drones may no longer occupy one whole tile each, and the map may need to grow so they can assist each other.
-3. **Fog of war.** Open floor stays hidden until it is connected to already-cleared areas. Walls are shown 2 deep from open space before the fog hides what’s behind them. (Today, mining a wall reveals the wall behind it and every connected open space.)
-4. **No naming pop-up.** A printed drone appears with its generated name; the player can rename it later from the Rename button in its info panel (bottom right).
-5. **Quick-succession printing.** Clicking Print drone several times queues one drone per free power cell, so the player can print every drone the crystals support in a row.
+**A. Printing**
+1. No naming pop-up. A printed drone appears with its generated name and a short message (“Tov printed.”). The game never pauses for it. (The pop-up paused the game, which made printing feel slow.)
+2. Renaming stays on the Rename button in the drone’s info panel (bottom right), which opens the same small name box; Enter or Esc closes it.
+3. Clicking Print drone several times queues one drone per free power cell, counting drones already queued. A click beyond that gives “No free power cell. Store more crystals in the power plant.” (Before, extra drones joined the queue and waited.)
+4. Print time stays 3 seconds per drone; drones and packs still share the 5-order queue.
+
+**B. Building starts when the player says so**
+5. Ore always goes to the command center first. No drone takes ore to a frame until the player starts building it.
+6. The player starts building by right-clicking the frame, or pressing Start building in its panel. Either adds a **construct** job to the job queue; selected drones go straight to it, as with mining jobs.
+7. Construct jobs are worked like any queued job, oldest first, by up to 3 drones at once. Each does round trips carrying 1 ore at a time from the command center until the frame is finished.
+8. All-round and Collect modes take construct jobs. Drones with a Mining pack can’t (they can’t carry items).
+9. With no ore in the command center the job stays queued, the frame shows “Waiting for ore”, and drones work on other jobs meanwhile. Ore isn’t reserved: construction and pack printing take whatever ore is there, first come first served.
+10. Cancelling: right-click the job with nothing selected, like any other job. Ore already delivered stays in the frame.
+11. Tutorial: a short new step after the debris step, “Right-click the printer frame to start rebuilding it.” Final wording goes to the owner before it’s built.
+
+**C. Fog of war**
+12. Walls show 2 deep from any visible open floor, veins included.
+13. Open floor behind walls stays hidden until it’s connected to open space the crew can reach, even inside that 2-deep band.
+14. Drone sight stays 11 tiles through connected open floor (revealing whole caverns at once would show the clearing from the first second).
+15. A visible second-row wall can be queued; drones start on it once the wall in front is mined.
+
+**D. Several drones per wall**
+16. Up to 4 drones per wall or rubble pile. Each open side gets work spots in a small 2 x 2 group on the floor in front of it, so even a wall at the end of a 1-tile tunnel takes 4. Drones still path tile to tile but no longer claim a whole tile.
+17. Drones shrink to about 75% of their size so 2 fit side by side without overlapping; the Captain shrinks by the same amount. (Covers the drone-resizing backlog item.)
+18. Speeds add up: 4 drones mine a wall 4 times as fast (soft rock 12 s to 3 s). Pacing is tuned in step 5; the map growth to about 64 x 44 stays in step 5.
 
 ## Acceptance checks to add to tests/playthrough.py
 

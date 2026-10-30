@@ -132,6 +132,7 @@ Everything decided so far, grouped by topic. Each entry is the current rule; sup
 ## Backlog (agreed, not built)
 
 - Next update: see `docs/FEATURE_SPEC_next.md` (new level flow, Build menu, deployer, bigger fleet, name generator). Its eight open questions were answered on 2026-10-23 (owner approved all proposals): one-syllable CVC names; buildings cost ore only; printer rebuilt at a fixed wreck frame, deployer placed freely; deployer becomes where new drones appear and lists the crew; map grows to about 64 x 44; 2 power cells per crystal; starting drones count toward power with 1 crystal pre-stored; 25 to 35 minute target. Each topic entry above is updated as its step ships.
+- Playtest changes (owner approved all proposals, 2026-10-30; full list in the spec): no naming pop-up and one drone queued per free power cell; building only after the player starts a **construct** job (up to 3 drones, ore round trips from the command center, no ore reserved); fog shows walls 2 deep and hides unconnected floor, sight stays 11 tiles; up to 4 drones per wall in 2 x 2 work spots, drones about 75% size, work speeds add up. Built in steps 2a to 2d, before the Build menu.
 - Drones resizing so several can work one wall face without overlapping (owner).
 - Tutorial message rewrite (owner: current wording is weak).
 - Story-heavy promotion moment.
