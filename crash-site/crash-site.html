@@ -234,10 +234,10 @@ button.slot.full{border-style:solid;background:transparent;color:var(--ink);font
 
 <div class="overlay" id="nameOv">
   <div class="card" style="max-width:400px">
-    <h2 id="nameTitle">New drone printed</h2>
-    <p id="nameSub">Give it a name. It stays with your crew from level to level.</p>
+    <h2>Rename</h2>
+    <p>Pick a new name. It stays with your crew from level to level.</p>
     <input id="nameIn" maxlength="16" autocomplete="off" aria-label="Drone name">
-    <div class="go"><button id="nameOk">Bring it online</button></div>
+    <div class="go"><button id="nameOk">Done</button></div>
   </div>
 </div>
 
@@ -832,7 +832,11 @@ function queuePrint(kind) {
   const p = B("printer");
   if (p.frame) { toast(`The printer needs ${p.frame.need - p.frame.ore} more ore before it can print.`); return; }
   if (p.queue.length + (p.cur ? 1 : 0) >= QUEUE_MAX) { toast(`The printer queue is full (${QUEUE_MAX} orders).`); return; }
-  if (kind === "drone" && p.queue.filter(k => k === "drone").length >= fleetRoom()) { toast(`The crew is full (${FLEET_MAX}, Captain included).`); return; }
+  if (kind === "drone") {
+    const queued = p.queue.filter(k => k === "drone").length;
+    if (queued >= fleetRoom()) { toast(`The crew is full (${FLEET_MAX}, Captain included).`); return; }
+    if (queued >= capacity() - used()) { toast("No free power cell. Store more crystals in the power plant."); return; }
+  }
   p.queue.push(kind); renderSel(true);
 }
 const printDrone = () => queuePrint("drone");
@@ -861,7 +865,7 @@ function finishPrint(k) {
   if (k === "drone") {
     const u = addUnit(newName(), x, y);
     burst(u.x, u.y, "#5fe0d0", 20);
-    openName(u, true);
+    toast(`${u.name} printed.`);
   } else {
     const [cx, cy] = center(spot);
     spawnItem(k, cx + (Math.random() - .5) * 10, cy + (Math.random() - .5) * 10);
@@ -878,10 +882,8 @@ function newName() {
   }
   return "Drone " + nextId;
 }
-function openName(u, fresh) {
+function openName(u) {
   pendingName = u;
-  $("nameTitle").textContent = fresh ? "New drone printed" : "Rename";
-  $("nameSub").textContent = fresh ? "Give it a name. It stays with your crew from level to level." : "Pick a new name.";
   $("nameIn").value = u.name;
   show("nameOv", true);
   setTimeout(() => { $("nameIn").focus(); $("nameIn").select(); }, 30);
@@ -1072,7 +1074,7 @@ function renderSel(force) {
   if ($("upBtn")) $("upBtn").onclick = () => { upgradeOpen = upgradeOpen === u.id ? null : u.id; renderSel(true); };
   for (const btn of el.querySelectorAll("[data-pk]")) btn.onclick = () => { upgradeOpen = null; u.holdT = 0; setTask(u, { t: "install", color: btn.dataset.pk }, ringTiles(cc)); renderSel(true); };
   for (const btn of el.querySelectorAll("[data-un]")) btn.onclick = () => { u.holdT = 0; setTask(u, { t: "uninstall", color: btn.dataset.un }, ringTiles(cc)); renderSel(true); };
-  $("renBtn").onclick = () => openName(u, false);
+  $("renBtn").onclick = () => openName(u);
   wireFocus([u]);
 }
 const FOCUS_INFO = { all: "Does everything: hauls what’s dropped, clears rubble, then mines the next queued wall.", mine: "Only mines queued walls, walking over rubble.", clear: "Only clears queued rubble and wreckage.", collect: "Only picks up and hauls loose items." };

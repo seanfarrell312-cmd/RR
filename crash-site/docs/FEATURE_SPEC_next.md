@@ -59,7 +59,7 @@ Technical choices that affect play (owner accepted with the above):
 
 1. Name generator and the 20-crew fleet cap. **Done.**
 2. **Done.** New start: command center and power plant (1 crystal stored, 2 cells per crystal), 3 drones, printer rebuilt at a wreck frame from floor-debris ore; tutorial steps for the new opening.
-2a. Playtest decisions A: no naming pop-up, quick-succession printing.
+2a. **Done.** Playtest decisions A: no naming pop-up, quick-succession printing.
 2b. Playtest decisions B: construct job; building only when the player starts it.
 2c. Playtest decisions C: fog of war.
 2d. Playtest decisions D: several drones per wall.

@@ -67,7 +67,7 @@ Everything decided so far, grouped by topic. Each entry is the current rule; sup
 - The Captain uses 0 power, mines and moves 25% faster than a drone, and works like any drone (owner).
 - Only the Captain can mine hard rock (owner). Drones mine soft rock and veins.
 - The Captain is just named "Captain" on promotion; renaming him later shows "Newname (Captain)" (owner).
-- New drones get a random one-syllable consonant-vowel-consonant name (“Tov”, “Feg”), never one already in the crew, with a short skip list of unfortunate words. The player can rename at printing and later (owner liked random names; CVC pattern owner approved 2026-10-23). The starting drone keeps its hand-picked name “Bolt”.
+- New drones get a random one-syllable consonant-vowel-consonant name (“Tov”, “Feg”), never one already in the crew, with a short skip list of unfortunate words. A printed drone appears already named, with a short message (“Tov printed.”); the player renames it later with the Rename button in its info panel (owner liked random names; CVC pattern owner approved 2026-10-23; no naming pop-up, owner approved 2026-10-30, because the pop-up paused the game). The starting drone keeps its hand-picked name “Bolt”.
 - Crew limit: **20 including the Captain** (owner). The printer won’t queue or start a drone past it; its panel shows “Crew: N of 20”.
 
 ## Mining, rubble and drops
@@ -91,7 +91,7 @@ Everything decided so far, grouped by topic. Each entry is the current rule; sup
 ## Buildings (current level 1)
 
 - **Command center**: supplies 1 power, stores ore and packs, fits packs to drones, accepts the power core.
-- **Drone printer**: starts level 1 as a wrecked **frame** at its usual spot, needing **8 ore** (owner approved 2026-10-23). The frame is drawn as broken plates inside a dashed amber outline, with an ore bar; its panel shows “Ore delivered: N of 8”. When the last ore arrives it becomes the working printer (“Drone printer rebuilt.”). Once built, it prints drones and upgrade packs from one queue of up to 5 orders, worked in order. A drone order waits for a free power cell; a pack order waits until the command center has 3 ore (cost is taken when printing starts). Click a queued order to remove it. Info panel is in three sections: top (power in use, ore, now printing, queue), middle (drones: cost, how many can deploy now), bottom (packs: cost, ore available, what each does) (owner).
+- **Drone printer**: starts level 1 as a wrecked **frame** at its usual spot, needing **8 ore** (owner approved 2026-10-23). The frame is drawn as broken plates inside a dashed amber outline, with an ore bar; its panel shows “Ore delivered: N of 8”. When the last ore arrives it becomes the working printer (“Drone printer rebuilt.”). Once built, it prints drones and upgrade packs from one queue of up to 5 orders, worked in order. Print drone queues one drone per free power cell, counting drones already queued; a click beyond that says “No free power cell” (owner approved 2026-10-30, so every drone the crystals support can be printed in a row); a pack order waits until the command center has 3 ore (cost is taken when printing starts). Click a queued order to remove it. Info panel is in three sections: top (power in use, ore, now printing, queue), middle (drones: cost, how many can deploy now), bottom (packs: cost, ore available, what each does) (owner).
 - **Power plant**: stores crystals; each adds a power cell.
 - **Main terminal**: needs 12 ore and 2 crystals delivered, then a repair (crew right-clicks it). Progress shows as two centred bars on the building and exact counts in its panel (owner).
 
@@ -149,6 +149,7 @@ Everything decided so far, grouped by topic. Each entry is the current rule; sup
 - Shift + right-click as "mark only" (all marking queues now).
 - Pip-style ore and crystal counters on the terminal building (replaced by two centred bars).
 - Crew list on the level complete card.
+- Naming pop-up after each printed drone (it paused the game); drone orders queued beyond the free power cells.
 - 1 power cell per crystal; power plant starting empty.
 - Drone printer standing intact at the start; level starting with a single drone.
 - North crystal vein as a required tutorial step; tutorial goal of 5 drones plus the Captain.
