@@ -915,7 +915,7 @@ const DEBRIS_ORE = [[19, 13], [24, 14], [23, 20], [18, 21]];
 const frameProg = () => { const f = B("printer").frame; return `Printer frame: ${f ? f.ore : PRINTER_COST} of ${PRINTER_COST} ore`; };
 const STEPS = [
   { msg: "Core OS online. One drone is answering. Left-click it to select it, then right-click the open space at the end of the tunnel to send it there.",
-    target: () => T(13, 17), done: () => units.some(u => tileOf(u)[0] >= 12) },
+    target: () => T(13, 17), done: () => units.some(u => !u.dormant && tileOf(u)[0] >= 12) },
   { msg: "Wreckage. The command center and power plant survived the crash, and two more drones were waiting here. The drone printer didn’t make it. Its frame needs 8 ore to rebuild. Ore is buried in the debris on the floor. Right-click rubble and wreckage to queue it for clearing. A drone you have selected when you give it a job goes back to auto-work, so it clears, hauls and builds on its own.",
     target: () => firstOpen(DEBRIS_ORE) || bCenter(B("printer")), prog: frameProg, done: () => !B("printer").frame || DEBRIS_ORE.every(([x, y]) => !pile[idx(x, y)]) },
   { msg: "The debris won’t cover it all. Ore veins show as blue flecks in soft rock. There’s one just west of the wreck and another beside the spot where your first drone woke. Queue them.",

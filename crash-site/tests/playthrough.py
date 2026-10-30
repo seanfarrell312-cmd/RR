@@ -69,6 +69,7 @@ def main():
         check("level starts with 3 drones, 2 of them powered down", val("g.units.length") == 3 and val("g.units.filter(u=>u.dormant).length") == 2)
         check("power plant starts with 1 crystal: 3 power cells", val('g.B("plant").crystals') == 1 and val("g.capacity()") == 3)
         check("printer starts as a frame needing 8 ore", val('g.B("printer").frame && g.B("printer").frame.need') == 8)
+        check("tutorial starts on step 1 (walk in)", val("g.step") == 0)
         sel("k===0"); cmd(13, 17); check("walk down the start tunnel", waitfor("g.step>=1", 20, "walk"))
         check("powered-down drones wake when the clearing is found", waitfor("g.units.every(u=>!u.dormant)", 10, "wake"))
         cmd(20, 17); waitfor("!g.units[0].path.length", 20, "walk2")
