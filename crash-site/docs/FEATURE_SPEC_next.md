@@ -63,6 +63,16 @@ Technical choices that affect play (owner accepted with the above):
 4. Deployer behaviour (drones appear there, crew list) and its tutorial step.
 5. Bigger map with more veins, then pacing and balance pass.
 
+## Owner notes, 2026-10-30 (to be turned into numbered decisions before step 3)
+
+The owner playtested step 2 and asked for these changes. They come after the move to the web (see the design log) and before the Build menu.
+
+1. **Building is player-initiated.** Ore from debris and walls only goes to the command center for storage. Drones must not carry ore to a build site until the player chooses to start building (the printer included). Suggested: a new **construct** job type that drones treat like any other queued job, handled the same way.
+2. **Several drones per wall.** Rework how drones take mining jobs, especially walls reachable from only one tile. Up to 3 or 4 drones should be able to work one wall face together without overlapping, Rock Raiders style, so they help each other and mining goes faster. Drones may no longer occupy one whole tile each, and the map may need to grow so they can assist each other.
+3. **Fog of war.** Open floor stays hidden until it is connected to already-cleared areas. Walls are shown 2 deep from open space before the fog hides what’s behind them. (Today, mining a wall reveals the wall behind it and every connected open space.)
+4. **No naming pop-up.** A printed drone appears with its generated name; the player can rename it later from the Rename button in its info panel (bottom right).
+5. **Quick-succession printing.** Clicking Print drone several times queues one drone per free power cell, so the player can print every drone the crystals support in a row.
+
 ## Acceptance checks to add to tests/playthrough.py
 
 - Level starts with the command center and power plant only, and 3 drones.
