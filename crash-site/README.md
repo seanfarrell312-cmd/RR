@@ -1,4 +1,6 @@
-# Crash Site
+# Crash Team
+
+Live: https://crashteam.redguygreenguy.com (deploys automatically from `main`).
 
 A browser RTS / automation game about a crashed starship's robot crew. Open `crash-site.html` in a browser to play.
 

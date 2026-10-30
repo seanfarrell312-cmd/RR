@@ -20,7 +20,8 @@ Everything decided so far, grouped by topic. Each entry is the current rule; sup
 - Top-down 2D, browser, single HTML file (owner).
 - First playable focused on drone control feel; it grew into the full level 1.
 - Working agreement: decisions listed first and approved; small playable steps; this design log; bug fixes and features deployed separately (owner).
-- Working title "Crash Site" was picked by the developer as a placeholder.
+- Working title is **Crash Team** (owner, 2026-10-30), replacing the developer’s placeholder “Crash Site”. The folder and file keep the old name for now.
+- The game is published as a static web app at **crashteam.redguygreenguy.com** (owner, 2026-10-30): Azure Static Web Apps free tier like the owner’s other game, deployed by GitHub Actions on every push to `main`, only if the playthrough test passes.
 
 ## Controls (owner: "smooth and pleasant", keep)
 

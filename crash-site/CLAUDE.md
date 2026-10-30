@@ -1,4 +1,4 @@
-# Crash Site (working title)
+# Crash Team (working title)
 
 A top-down 2D real-time strategy / automation game that runs in the browser. You are the control program of a crashed starship's robot crew: wake drones, mine and clear the buried wreck, store power crystals, and rebuild the ship section by section. Loosely inspired by LEGO Rock Raiders. Everything here is original: no Rock Raiders or Manic Miners files, art, names or code are used, and none should be.
 
@@ -7,14 +7,15 @@ Current state: level 1 (tutorial) is fully playable start to finish, plus a free
 ## Files
 
 - `crash-site.html`: the entire game. One self-contained file (HTML, CSS, JavaScript, Canvas 2D). No build step, no dependencies besides an optional Google Font with a system fallback.
-- `tests/playthrough.py`: automated regression test. Plays all of level 1 at 18x speed and checks its rules (29 checks).
+- `tests/playthrough.py`: automated regression test. Plays all of level 1 at 18x speed and checks its rules (30 checks).
 - `docs/DESIGN_LOG.md`: every design decision made so far, with the reasoning. Read it before changing gameplay.
 - `docs/FEATURE_SPEC_next.md`: the next planned update, including open questions that must be answered before building.
 - `README.md`: setup notes for humans.
 
 ## Running and testing
 
-- Play: open `crash-site.html` in a browser. Needs a mouse and keyboard.
+- Play: open `crash-site.html` in a browser, or play the live build at https://crashteam.redguygreenguy.com. Needs a mouse and keyboard.
+- Deploy: every push to `main` runs `.github/workflows/azure-static-web-apps.yml` (repo root). It runs the playthrough test, copies `crash-site.html` to `dist/index.html` with `staticwebapp.config.json`, and uploads `dist` to the Azure Static Web App behind crashteam.redguygreenguy.com. Pull requests to `main` get a preview URL. Never deploy a build that fails the test.
 - Test: `python tests/playthrough.py` (first time: `pip install playwright` then `python -m playwright install chromium`). Must print `ALL CHECKS PASSED`. Run it after every change that touches gameplay, and extend it when adding mechanics.
 - The test injects a `window.__g` hook by replacing the final `})();` line of the script and speeds up the line `const dt = Math.min(.05, (t - last) / 1000);`. If you rename or move either, update the test.
 
